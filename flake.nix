@@ -74,17 +74,6 @@
 
                 piccolo
                 fastapi
-
-                # Add whatever else you'd like here.
-                # pkgs.basedpyright
-
-                # pkgs.black
-                # or
-                # python.pkgs.black
-
-                # pkgs.ruff
-                # or
-                # python.pkgs.ruff
               ]
               ++ fastapi.optional-dependencies.standard
               ++ piccolo.optional-dependencies.postgres
