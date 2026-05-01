@@ -73,7 +73,24 @@
                 pip
 
                 piccolo
+                uvicorn
+                starlette
                 fastapi
+
+                (buildPythonPackage rec {
+                  pname = "piccolo-api";
+                  version = "1.9.0";
+                  format = "setuptools";
+                  src = pkgs.fetchFromGitHub {
+                    owner = "piccolo-orm";
+                    repo = "piccolo_api";
+                    rev = version;
+                    hash = "sha256-Ugi6PsP3MoCaPot6bWdXvYddU1zOwHxDOcI4bsSVmrI=";
+                  };
+                  doCheck = false;
+                })
+
+
               ]
               ++ fastapi.optional-dependencies.standard
               ++ piccolo.optional-dependencies.postgres
