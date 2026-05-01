@@ -8,25 +8,16 @@ The python env will be built by the direnv
 Setup postgres and sharkey for dev:
 ```
 db-setup
-db-start
-
-redis-start
-sharkey-setup
-
-db-stop
 ```
 
 Then to start the dev environment
 
 ```
 # Postgres
-db-start
-
-# Redis
-redis-start
+dev-start
 
 # Sharkey
-sharkey-start
+sharkey migrateandstart
 
 # API server/FastAPI
 python api/main.py

@@ -1,7 +1,7 @@
 {
   description = "Flake for Hajdentity development";
 
-  inputs.nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # unstable Nixpkgs
+  inputs.nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
 
   outputs =
     { self, ... }@inputs:
@@ -45,14 +45,43 @@
               pkgs.lib.concatStrings
             ];
 
-          sharkeyDev = import ./nix/sharkey.nix { inherit pkgs; };
           python = pkgs."python${concatMajorMinor pyversion}";
+
+          pgWithExt = pkgs.postgresql.withPackages (p: [ p.pgroonga ]);
         in
         {
           default = pkgs.mkShellNoCC {
             venvDir = ".venv";
 
             postShellHook = ''
+              export MISSKEY_CONFIG_DIR="$PWD/.sharkey"
+              mkdir -p "$MISSKEY_CONFIG_DIR"
+              mkdir -p "$PWD/.files"
+
+              if [ ! -f "$MISSKEY_CONFIG_DIR/default.yml" ]; then
+                cat > "$MISSKEY_CONFIG_DIR/default.yml" <<EOF
+              url: http://localhost:2456/
+              port: 2456
+              db:
+                host: 127.0.0.1
+                port: 5432
+                db: hajdentity
+                user: postgres
+                pass: ""
+              redis:
+                host: 127.0.0.1
+                port: 6379
+              meilisearch:
+                host: 127.0.0.1
+                port: 7700
+                index: sharkey
+              id: aidx
+              mediaDirectory: "$PWD/.files"
+              EOF
+                echo "Generated fresh default.yml config!"
+              fi
+
+              # 3. Python venv warning
               venvVersionWarn() {
               	local venvVersion
               	venvVersion="$("$venvDir/bin/python" -c 'import platform; print(platform.python_version())')"
@@ -100,8 +129,13 @@
                 pkgs.nodejs
                 pkgs.pnpm
                 pkgs.yarn
-                pkgs.postgresql
+
+                pkgs.sharkey
+
+                pgWithExt
                 pkgs.redis
+                pkgs.meilisearch
+
                 (pkgs.writeShellScriptBin "db-setup" ''
                   export PGDATA="$PWD/.pgdata"
                   export PGHOST="$PGDATA"
@@ -119,27 +153,52 @@
                     echo "Database already initialized at $PGDATA"
                   fi
                 '')
-                (pkgs.writeShellScriptBin "db-start" ''
+
+                (pkgs.writeShellScriptBin "dev-start" ''
                   export PGDATA="$PWD/.pgdata"
+                  export REDIS_DATA="$PWD/.redis"
+                  export MEILI_DATA="$PWD/.meili"
+
+                  mkdir -p "$REDIS_DATA" "$MEILI_DATA"
+
+                  echo "starting postgres"
                   pg_ctl -D "$PGDATA" -l "$PGDATA/logfile" start
+
+                  echo "starting redis"
+                  redis-server --dir "$REDIS_DATA" --port 6379 --daemonize yes
+
+                  echo "starting meilisearch"
+                  meilisearch --db-path "$MEILI_DATA" > "$MEILI_DATA/logfile" 2>&1 &
+                  echo $! > "$MEILI_DATA/pid"
+
+                  echo "all local services started i think? maybe? idk? just check for errors"
                 '')
-                (pkgs.writeShellScriptBin "db-stop" ''
+
+                (pkgs.writeShellScriptBin "dev-stop" ''
                   export PGDATA="$PWD/.pgdata"
-                  pg_ctl -D "$PGDATA" stop
+                  export MEILI_DATA="$PWD/.meili"
+
+                  echo "stopping postgres"
+                  pg_ctl -D "$PGDATA" stop || true
+
+                  echo "stopping redis"
+                  redis-cli shutdown || true
+
+                  echo "stopping meilisearch"
+                  if [ -f "$MEILI_DATA/pid" ]; then
+                    kill $(cat "$MEILI_DATA/pid") 2>/dev/null || true
+                    rm "$MEILI_DATA/pid"
+                  fi
+
+                  echo "all local services stopped i think"
                 '')
-                (pkgs.writeShellScriptBin "redis-start" ''
-                  mkdir -p "$PWD/.redis"
-                  redis-server --dir "$PWD/.redis" --port 6379 --daemonize yes
-                '')
-                (pkgs.writeShellScriptBin "redis-stop" ''
-                  redis-cli shutdown
-                '')
+
                 self.formatter.${system}
               ];
           };
         }
       );
 
-      formatter = forEachSupportedSystem ({ pkgs, ... }: pkgs.nixfmt);
+      formatter = forEachSupportedSystem ({ pkgs, ... }: pkgs.nixfmt-rfc-style);
     };
 }
