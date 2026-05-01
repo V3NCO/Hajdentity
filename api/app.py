@@ -1,16 +1,10 @@
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, status
-from fastapi.exceptions import HTTPException
+from fastapi import FastAPI
 from fastapi.routing import APIRouter
 from piccolo.engine import engine_finder
 from piccolo_api.crud.serializers import create_pydantic_model
-from starlette.routing import Mount, Route
-from starlette.staticfiles import StaticFiles
-
-from home.endpoints import HomeEndpoint
-from home.piccolo_app import APP_CONFIG
 from home.tables import Task
 
 

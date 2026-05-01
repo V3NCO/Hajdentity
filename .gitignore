@@ -3,6 +3,8 @@
 .pixi/*
 !.pixi/config.toml
 
+.pgdata
+logfiles
 
 # Nuxt dev/build outputs
 .output

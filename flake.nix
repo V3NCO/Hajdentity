@@ -95,7 +95,37 @@
               ++ fastapi.optional-dependencies.standard
               ++ piccolo.optional-dependencies.postgres
               )
-              ++ [ pkgs.nodejs pkgs.pnpm pkgs.yarn self.formatter.${system} ];
+              ++ [
+                pkgs.nodejs
+                pkgs.pnpm
+                pkgs.yarn
+                pkgs.postgresql
+                (pkgs.writeShellScriptBin "db-setup" ''
+                  export PGDATA="$PWD/.pgdata"
+                  export PGHOST="$PGDATA"
+                  if [ ! -d "$PGDATA" ]; then
+                    echo "Initializing PostgreSQL database..."
+                    initdb -U postgres -D "$PGDATA" --auth=trust
+                    echo "unix_socket_directories = '$PGDATA'" >> "$PGDATA/postgresql.conf"
+                    pg_ctl -D "$PGDATA" -l "$PGDATA/logfile" start
+                    sleep 2
+                    createdb -U postgres hajdentity
+                    pg_ctl -D "$PGDATA" stop
+                    echo "Database initialized!"
+                  else
+                    echo "Database already initialized at $PGDATA"
+                  fi
+                '')
+                (pkgs.writeShellScriptBin "db-start" ''
+                  export PGDATA="$PWD/.pgdata"
+                  pg_ctl -D "$PGDATA" -l "$PGDATA/logfile" start
+                '')
+                (pkgs.writeShellScriptBin "db-stop" ''
+                  export PGDATA="$PWD/.pgdata"
+                  pg_ctl -D "$PGDATA" stop
+                '')
+                self.formatter.${system}
+              ];
           };
         }
       );

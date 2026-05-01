@@ -5,7 +5,7 @@ from piccolo.conf.apps import AppRegistry
 
 DB = PostgresEngine(
     config={
-        "database": "piccolo_project",
+        "database": "hajdentity",
         "user": "postgres",
         "password": "",
         "host": "localhost",
