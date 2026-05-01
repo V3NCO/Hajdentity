@@ -1,5 +1,5 @@
 {
-  description = "A Nix-flake-based Python development environment";
+  description = "Flake for Hajdentity development";
 
   inputs.nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # unstable Nixpkgs
 
@@ -19,27 +19,21 @@
           system:
           f {
             inherit system;
-            pkgs = import inputs.nixpkgs { inherit system; };
+            pkgs = import inputs.nixpkgs {
+              inherit system;
+              overlays = [ inputs.self.overlays.default ];
+            };
           }
         );
 
-      /*
-        Change this value ({major}.{min}) to
-        update the Python virtual-environment
-        version. When you do this, make sure
-        to delete the `.venv` directory to
-        have the hook rebuild it for the new
-        version, since it won't overwrite an
-        existing one. After this, reload the
-        development shell to rebuild it.
-        You'll see a warning asking you to
-        do this when version mismatches are
-        present. For safety, removal should
-        be a manual step, even if trivial.
-      */
-      version = "3.13";
+      pyversion = "3.13";
     in
     {
+      overlays.default = final: prev: rec {
+        nodejs = prev.nodejs;
+        yarn = (prev.yarn.override { inherit nodejs; });
+      };
+
       devShells = forEachSupportedSystem (
         { pkgs, system }:
         let
@@ -51,7 +45,7 @@
               pkgs.lib.concatStrings
             ];
 
-          python = pkgs."python${concatMajorMinor version}";
+          python = pkgs."python${concatMajorMinor pyversion}";
         in
         {
           default = pkgs.mkShellNoCC {
@@ -77,7 +71,9 @@
               (with python.pkgs; [
                 venvShellHook
                 pip
-                pkgs.pixi
+
+                piccolo
+                fastapi
 
                 # Add whatever else you'd like here.
                 # pkgs.basedpyright
@@ -89,8 +85,11 @@
                 # pkgs.ruff
                 # or
                 # python.pkgs.ruff
-              ])
-              ++ [ self.formatter.${system} ];
+              ]
+              ++ fastapi.optional-dependencies.standard
+              ++ piccolo.optional-dependencies.postgres
+              )
+              ++ [ pkgs.nodejs pkgs.pnpm pkgs.yarn self.formatter.${system} ];
           };
         }
       );
