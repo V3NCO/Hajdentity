@@ -45,6 +45,7 @@
               pkgs.lib.concatStrings
             ];
 
+          sharkeyDev = import ./nix/sharkey.nix { inherit pkgs; };
           python = pkgs."python${concatMajorMinor pyversion}";
         in
         {
@@ -101,7 +102,6 @@
                 pkgs.yarn
                 pkgs.postgresql
                 pkgs.redis
-                pkgs.sharkey
                 (pkgs.writeShellScriptBin "db-setup" ''
                   export PGDATA="$PWD/.pgdata"
                   export PGHOST="$PGDATA"
@@ -133,38 +133,6 @@
                 '')
                 (pkgs.writeShellScriptBin "redis-stop" ''
                   redis-cli shutdown
-                '')
-                (pkgs.writeShellScriptBin "sharkey-setup" ''
-                  export PGDATA="$PWD/.pgdata"
-                  export PGHOST="$PGDATA"
-
-                  echo "Creating Sharkey configuration..."
-                  mkdir -p "$PWD/.sharkey"
-                  cat <<EOF > "$PWD/.sharkey/default.yml"
-                  url: http://localhost:3000
-                  port: 3000
-                  db:
-                    host: 127.0.0.1
-                    port: 5432
-                    db: sharkey
-                    user: postgres
-                    pass: ""
-                  redis:
-                    host: localhost
-                    port: 6379
-                  EOF
-
-                  echo "Creating Sharkey database..."
-                  createdb -U postgres sharkey || true
-
-                  echo "Running Sharkey migrations..."
-                  export MISSKEY_CONFIG_YML="$PWD/.sharkey/default.yml"
-                  sharkey migrate
-                  echo "Sharkey setup complete!"
-                '')
-                (pkgs.writeShellScriptBin "sharkey-start" ''
-                  export MISSKEY_CONFIG_YML="$PWD/.sharkey/default.yml"
-                  sharkey start
                 '')
                 self.formatter.${system}
               ];

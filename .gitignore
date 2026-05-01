@@ -5,6 +5,7 @@
 
 .pgdata
 logfiles
+result
 
 # Nuxt dev/build outputs
 .output
