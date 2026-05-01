@@ -3,6 +3,7 @@ from typing import Any
 
 from fastapi import FastAPI, status
 from fastapi.exceptions import HTTPException
+from fastapi.routing import APIRouter
 from piccolo.engine import engine_finder
 from piccolo_api.crud.serializers import create_pydantic_model
 from starlette.routing import Mount, Route
@@ -36,14 +37,8 @@ async def lifespan(app: FastAPI):
     await close_database_connection_pool()
 
 
-app = FastAPI(
-    routes=[
-        Route("/", HomeEndpoint),
-        Mount("/static/", StaticFiles(directory="static")),
-    ],
-    lifespan=lifespan,
-)
-
+app = FastAPI(lifespan=lifespan)
+api = APIRouter(prefix="/api")
 
 TaskModelIn: Any = create_pydantic_model(
     table=Task,
@@ -56,63 +51,9 @@ TaskModelOut: Any = create_pydantic_model(
     model_name="TaskModelOut",
 )
 
-
-# Check if the record is None. Use for query callback
-def check_record_not_found(result: dict[str, Any]) -> dict[str, Any]:
-    if result is None:
-        raise HTTPException(
-            detail="Record not found",
-            status_code=status.HTTP_404_NOT_FOUND,
-        )
-    return result
+@api.get("/")
+async def test():
+    return "pong!"
 
 
-@app.get("/tasks/", response_model=list[TaskModelOut], tags=["Task"])
-async def tasks():
-    return await Task.select().order_by(Task._meta.primary_key, ascending=False)
-
-
-@app.get("/tasks/{task_id}/", response_model=TaskModelOut, tags=["Task"])
-async def single_task(task_id: int):
-    task = (
-        await Task.select()
-        .where(Task._meta.primary_key == task_id)
-        .first()
-        .callback(check_record_not_found)
-    )
-    return task
-
-
-@app.post("/tasks/", response_model=TaskModelOut, tags=["Task"])
-async def create_task(task_model: TaskModelIn):
-    task = Task(**task_model.model_dump())
-    await task.save()
-    return task.to_dict()
-
-
-@app.put("/tasks/{task_id}/", response_model=TaskModelOut, tags=["Task"])
-async def update_task(task_id: int, task_model: TaskModelIn):
-    task = (
-        await Task.objects()
-        .get(Task._meta.primary_key == task_id)
-        .callback(check_record_not_found)
-    )
-    for key, value in task_model.model_dump().items():
-        setattr(task, key, value)
-
-    await task.save()
-    return task.to_dict()
-
-
-@app.delete(
-    "/tasks/{task_id}/",
-    status_code=status.HTTP_204_NO_CONTENT,
-    tags=["Task"],
-)
-async def delete_task(task_id: int):
-    task = (
-        await Task.objects()
-        .get(Task._meta.primary_key == task_id)
-        .callback(check_record_not_found)
-    )
-    await task.remove()
+app.include_router(api)
