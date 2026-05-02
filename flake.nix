@@ -106,6 +106,7 @@
                 uvicorn
                 starlette
                 fastapi
+                pycrypto
 
                 (buildPythonPackage rec {
                   pname = "piccolo-api";
