@@ -25,3 +25,39 @@ def derive_diversified_key(master_key: bytes, uid_bytes: bytes, key_no: int) -> 
     c = CMAC.new(master_key, ciphermod=AES)
     c.update(div_input)
     return c.digest()
+
+def pkcs7_unpad(data: bytes) -> bytes:
+    if len(data) == 0:
+        raise ValueError("Empty plaintext")
+    pad = data[-1]
+    if pad < 1 or pad > 16:
+        raise ValueError("Invalid PKCS7 padding")
+    if data[-pad:] != bytes([pad]) * pad:
+        raise ValueError("Invalid PKCS7 padding bytes")
+    return data[:-pad]
+
+def try_decrypt_p(key0: bytes, p_hex: str):
+    try:
+        p = bytes.fromhex(p_hex)
+    except Exception:
+        raise ValueError("p is not valid hex")
+
+    if len(p) >= 17:
+        iv = p[:16]
+        ciphertext = p[16:]
+        try:
+            cipher = AES.new(key0, AES.MODE_CBC, iv)
+            plaintext = cipher.decrypt(ciphertext)
+            return pkcs7_unpad(plaintext)
+        except Exception:
+            pass
+
+    if len(p) == 0 or len(p) % 16 != 0:
+        raise ValueError("p ciphertext length invalid for AES-CBC")
+    iv = b'\x00' * 16
+    cipher = AES.new(key0, AES.MODE_CBC, iv)
+    plaintext = cipher.decrypt(p)
+    try:
+        return pkcs7_unpad(plaintext)
+    except Exception as e:
+        raise ValueError(f"Decryption failed (padding): {e}")

@@ -1,3 +1,4 @@
+from ast import Return
 from contextlib import asynccontextmanager
 import datetime
 
@@ -7,8 +8,9 @@ from piccolo.engine import engine_finder
 from pydantic import BaseModel
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
-from helpers import validate_uid_hex, derive_diversified_key
+from helpers import try_decrypt_p, validate_uid_hex, derive_diversified_key
 from home.tables import NFCTable
+import logging
 
 
 
@@ -55,7 +57,57 @@ async def test():
 
 @api.post("/nfc/auth")
 async def nfc_auth(tap: NfcRequest):
-    return ":3"
+    if not tap.u or not tap.p or not tap.c:
+        raise HTTPException(status_code=400, detail="Missing data!")
+    tag = await NFCTable.objects().get(NFCTable.user_id == tap.u)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    try:
+        key0 = bytes.fromhex(tag.key0)
+        key4 = bytes.fromhex(tag.key4)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Stored key0/key4 invalid, please email me")
+
+    try:
+        pt = try_decrypt_p(key0, tap.p)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Failed to decrypt PICC: {e}")
+
+    try:
+        stored_uid_bytes = bytes.fromhex(tag.uid)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Stored UID invalid, please email me")
+
+    uid_len = len(stored_uid_bytes)
+    if len(pt) < uid_len + 3:
+        raise HTTPException(status_code=400, detail="Decrypted payload too short")
+
+    uid_bytes = pt[:uid_len]
+    ctr_bytes = pt[uid_len:uid_len + 3]
+    ctr = int.from_bytes(ctr_bytes, 'little')
+
+    if uid_bytes != stored_uid_bytes:
+        logging.warning(f"UID mismatch between request {uid_bytes.hex()} and stored {stored_uid_bytes.hex()}")
+        tag.status = "debuguidmismatch"
+        # Theres been too much shenenigans in the app for now so im not confident on UID stuff
+
+    cobj = CMAC.new(key4, ciphermod=AES)
+    cobj.update(uid_bytes + ctr_bytes)
+    expected_mac_trunc = cobj.digest()[:8].hex()
+
+    if tap.c.lower() != expected_mac_trunc:
+        raise HTTPException(status_code=403, detail="Invalid MAC signature")
+
+    last_ctr = tag.last_counter
+    if ctr <= last_ctr:
+        raise HTTPException(status_code=403, detail="URL expired, please physically tap the NFC tag")
+
+    tag.last_counter = ctr
+    await tag.save()
+
+    return {"status": "success", "message": "One-time tap verified"}
+
 
 # TODO: Add authentication
 @api.post('/nfc/provision')
