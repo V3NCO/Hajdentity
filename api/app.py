@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 import datetime
-from logging import raiseExceptions
 
 from fastapi import FastAPI, HTTPException, APIRouter
 from piccolo.engine import engine_finder
@@ -8,7 +7,7 @@ from piccolo.engine import engine_finder
 from pydantic import BaseModel
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
-import binascii
+from helpers import validate_uid_hex, derive_diversified_key
 from home.tables import NFCTable
 
 
@@ -42,54 +41,21 @@ aeskey = bytes.fromhex("508575b21dfec2d4c8b0b735d4a3edf7") # i cba to store it f
 
 
 class NfcRequest(BaseModel):
-    uid: str
-    ctr: int
-    mac: str
+    u: str
+    p: str
+    c: str
 
 class ProvisionRequest(BaseModel):
     uid: str
     user_id: str
 
-async def diversify_key(uid_hex, master_key, key_no):
-    uid = bytes.fromhex(uid_hex)
-    div_input = b'\x01' + uid + b'\x00' * (15 - len(uid))
-    c = CMAC.new(master_key, ciphermod=AES)
-    c.update(div_input)
-    return c.digest().hex()
-
-
 @api.get("/")
 async def test():
     return "pong!"
 
-# TODO: Redo because this is not based on what we're gonna use
 @api.post("/nfc/auth")
 async def nfc_auth(tap: NfcRequest):
-    tag = await NFCTable.objects().get(NFCTable.uid == tap.uid)
-    if not tag:
-        raise HTTPException(status_code=404, detail="Tag not found")
-
-    if tap.ctr <= tag.last_counter:
-        raise HTTPException(status_code=403, detail="URL Already used - Please physically tap the NFC Tag!")
-
-    try:
-        key = tag.secret_key
-        message = binascii.unhexlify(tap.uid) + tap.ctr.to_bytes(3, 'little')
-
-        cobj = CMAC.new(key, ciphermod=AES)
-        cobj.update(message)
-        expected_mac = cobj.hexdigest()[:16]
-
-        if tap.mac.lower() != expected_mac.lower():
-            raise HTTPException(status_code=403, detail="Invalid MAC signature")
-
-        tag.last_counter = tap.ctr
-        await tag.save()
-
-        return { "status": "success", "message": "One-time tap verified" }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return ":3"
 
 # TODO: Add authentication
 @api.post('/nfc/provision')
@@ -98,20 +64,43 @@ async def provision(req: ProvisionRequest):
     if not req.uid or not req.user_id:
         raise HTTPException(status_code=400, detail="Missing data!")
 
-    tag_key_0 = await diversify_key(req.uid, aeskey, 0)
-    tag_key_4 = await diversify_key(req.uid, aeskey, 4)
+    try:
+        uid_bytes = validate_uid_hex(req.uid)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    await NFCTable.insert(NFCTable(
-        user_id = req.user_id,
-        status= "active",
-        uid = req.uid,
-        created_at = datetime.datetime.now()
-    ))
+    uid_norm = uid_bytes.hex()
 
-    return {
-        "key0": tag_key_0,
-        "key4": tag_key_4,
-        "url": f"https://hajdentity.esther.tf/nfc/auth?u={req.user_id}&p={{PICC}}&c={{MAC}}"
-    }
+    existing = await NFCTable.objects().get(NFCTable.uid == uid_norm)
+    if existing:
+        return {
+            "note": "already_exists",
+            "uid": uid_norm,
+            "user_id": existing.user_id,
+            "key0": existing.key0,
+            "key4": existing.key4,
+            "url": f"https://hajdentity.esther.tf/nfc/auth?u={existing.user_id}&p={{PICC}}&c={{MAC}}"
+        }
+
+    key0_bytes = derive_diversified_key(aeskey, uid_bytes, 0)
+    key4_bytes = derive_diversified_key(aeskey, uid_bytes, 4)
+    key0_hex = key0_bytes.hex()
+    key4_hex = key4_bytes.hex()
+
+    final_url = f"https://hajdentity.esther.tf/nfc/auth?u={req.user_id}&p={{PICC}}&c={{MAC}}"
+
+    try:
+        await NFCTable.insert(NFCTable(
+            user_id=req.user_id,
+            status="active",
+            uid=uid_norm,
+            key0=key0_hex,
+            key4=key4_hex,
+            created_at=datetime.datetime.now()
+        ))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB insert failed: {str(e)}")
+
+    return {"uid": uid_norm, "user_id": req.user_id, "key0": key0_hex, "key4": key4_hex, "url": final_url}
 
 app.include_router(api)
