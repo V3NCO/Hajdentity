@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import datetime
 from logging import raiseExceptions
 
 from fastapi import FastAPI, HTTPException, APIRouter
@@ -37,7 +38,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 api = APIRouter(prefix="/api")
-
+aeskey = bytes.fromhex("508575b21dfec2d4c8b0b735d4a3edf7") # i cba to store it for now i just want a POC
 
 
 class NfcRequest(BaseModel):
@@ -45,10 +46,23 @@ class NfcRequest(BaseModel):
     ctr: int
     mac: str
 
+class ProvisionRequest(BaseModel):
+    uid: str
+    user_id: str
+
+async def diversify_key(uid_hex, master_key, key_no):
+    uid = bytes.fromhex(uid_hex)
+    div_input = b'\x01' + uid + b'\x00' * (15 - len(uid))
+    c = CMAC.new(master_key, ciphermod=AES)
+    c.update(div_input)
+    return c.digest().hex()
+
+
 @api.get("/")
 async def test():
     return "pong!"
 
+# TODO: Redo because this is not based on what we're gonna use
 @api.post("/nfc/auth")
 async def nfc_auth(tap: NfcRequest):
     tag = await NFCTable.objects().get(NFCTable.uid == tap.uid)
@@ -77,5 +91,27 @@ async def nfc_auth(tap: NfcRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# TODO: Add authentication
+@api.post('/nfc/provision')
+async def provision(req: ProvisionRequest):
+
+    if not req.uid or not req.user_id:
+        raise HTTPException(status_code=400, detail="Missing data!")
+
+    tag_key_0 = await diversify_key(req.uid, aeskey, 0)
+    tag_key_4 = await diversify_key(req.uid, aeskey, 4)
+
+    await NFCTable.insert(NFCTable(
+        user_id = req.user_id,
+        status= "active",
+        uid = req.uid,
+        created_at = datetime.datetime.now()
+    ))
+
+    return {
+        "key0": tag_key_0,
+        "key4": tag_key_4,
+        "url": f"https://hajdentity.esther.tf/nfc/auth?u={req.user_id}&p={{PICC}}&c={{MAC}}"
+    }
 
 app.include_router(api)
