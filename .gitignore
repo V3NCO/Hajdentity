@@ -37,3 +37,6 @@ logs
 !.env.example
 
 __pycache__
+api/.python-version
+api/pyproject.toml
+api/uv.lock
