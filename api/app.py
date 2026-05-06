@@ -53,7 +53,7 @@ class ProvisionRequest(BaseModel):
 
 @api.get("/")
 async def test():
-    return "pong!"
+    return "API is UP!"
 
 @api.post("/nfc/auth")
 async def nfc_auth(tap: NfcRequest):
