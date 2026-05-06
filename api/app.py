@@ -8,7 +8,8 @@ from piccolo.engine import engine_finder
 from pydantic import BaseModel
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
-from helpers import try_decrypt_p, validate_uid_hex, derive_diversified_key
+from helpers import diversify_key
+from constants import MASTER_KEY
 from home.tables import NFCTable
 import logging
 
@@ -39,7 +40,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 api = APIRouter(prefix="/api")
-aeskey = bytes.fromhex("508575b21dfec2d4c8b0b735d4a3edf7") # i cba to store it for now i just want a POC
 
 
 class NfcRequest(BaseModel):
