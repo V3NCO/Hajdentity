@@ -58,7 +58,12 @@ async def test():
 
 @api.post("/nfc/auth")
 async def nfc_auth(tap: NfcRequest):
-     
+    picc_bytes = bytes.fromhex(tap.picc_data)
+    iv = b'\x00' * 16
+    cipher = AES.new(KEY3, AES.MODE_CBC, iv)
+
+    decrypted = cipher.decrypt(picc_bytes)
+    print(decrypted.hex())
 
 
 # TODO: Add authentication and input validation

@@ -1,6 +1,6 @@
 <script setup>
 const route = useRoute()
-const { picc, cmac } = route.query
+const { picc_data, cmac } = route.query
 
 const { data, error } = await useFetch('/api/nfc/auth', {
   method: 'POST',
