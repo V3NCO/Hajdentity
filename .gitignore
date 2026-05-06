@@ -10,6 +10,9 @@ result
 .sharkey
 .redis
 
+compose.yaml
+pg
+
 # Nuxt dev/build outputs
 .output
 .data

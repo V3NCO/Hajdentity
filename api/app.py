@@ -1,6 +1,7 @@
 from ast import Return
 from contextlib import asynccontextmanager
 import datetime
+from email.policy import HTTP
 
 from fastapi import FastAPI, HTTPException, APIRouter
 from piccolo.engine import engine_finder
@@ -9,7 +10,8 @@ from pydantic import BaseModel
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from helpers import diversify_key
-from constants import MASTER_KEY
+from constants import MASTER_KEY, KEY3, SYSTEM_ID
+import secrets
 from home.tables import NFCTable
 import logging
 
@@ -109,50 +111,29 @@ async def nfc_auth(tap: NfcRequest):
     return {"status": "success", "message": "One-time tap verified"}
 
 
-# TODO: Add authentication
+# TODO: Add authentication and input validation
 @api.post('/nfc/provision')
 async def provision(req: ProvisionRequest):
+  try:
+    uid = bytes.fromhex(req.uid)
+  except Exception:
+    raise HTTPException(status_code=400, detail="Invalid UID")
+  key0 = secrets.token_bytes(16) # this one is the lock, you cant write or read secret data from the tag without it
+  key3= KEY3 # this one has to be the same for everyone because when we have to decrypt picc we dont know the uid yet
+  key4 = diversify_key(MASTER_KEY, uid, SYSTEM_ID) # signature key
 
-    if not req.uid or not req.user_id:
-        raise HTTPException(status_code=400, detail="Missing data!")
+  existing = await NFCTable.objects().get(NFCTable.uid == uid.hex())
+  if existing:
+    raise HTTPException(status_code=403, detail="This tag uid already exists, please contact the admin if it's an issue for you")
 
-    try:
-        uid_bytes = validate_uid_hex(req.uid)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+  tag = NFCTable(uid=uid.hex(), user_id=req.user_id, key0=key0.hex(), key4=key4.hex(), status="active", created_at = datetime.datetime.now())
+  await tag.save()
 
-    uid_norm = uid_bytes.hex()
-
-    existing = await NFCTable.objects().get(NFCTable.uid == uid_norm)
-    if existing:
-        return {
-            "note": "already_exists",
-            "uid": uid_norm,
-            "user_id": existing.user_id,
-            "key0": existing.key0,
-            "key4": existing.key4,
-            "url": f"https://hajdentity.esther.tf/nfc/auth?u={existing.user_id}&p={{PICC}}&c={{MAC}}"
-        }
-
-    key0_bytes = derive_diversified_key(aeskey, uid_bytes, 0)
-    key4_bytes = derive_diversified_key(aeskey, uid_bytes, 4)
-    key0_hex = key0_bytes.hex()
-    key4_hex = key4_bytes.hex()
-
-    final_url = f"https://hajdentity.esther.tf/nfc/auth?u={req.user_id}&p={{PICC}}&c={{MAC}}"
-
-    try:
-        await NFCTable.insert(NFCTable(
-            user_id=req.user_id,
-            status="active",
-            uid=uid_norm,
-            key0=key0_hex,
-            key4=key4_hex,
-            created_at=datetime.datetime.now()
-        ))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB insert failed: {str(e)}")
-
-    return {"uid": uid_norm, "user_id": req.user_id, "key0": key0_hex, "key4": key4_hex, "url": final_url}
-
+  return {
+    "status": "ok",
+    "user_id": req.user_id,
+    "key0": key0.hex(),
+    "key3": key3.hex(),
+    "key4": key4.hex()
+  }
 app.include_router(api)
