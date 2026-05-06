@@ -5,13 +5,13 @@ const { picc, cmac } = route.query
 const { data, error } = await useFetch('/api/nfc/auth', {
   method: 'POST',
   body: {
-    picc: picc,
+    picc_data: picc_data,
     cmac: cmac
   }
 })
 
 if (data.value) {
-  console.log("Auth success")
+  console.log("Auth success?!111!!!!! YIPPPEEEEE")
 } else {
   console.log("nope")
 }
