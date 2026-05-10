@@ -63,7 +63,20 @@ async def nfc_auth(tap: NfcRequest):
     cipher = AES.new(KEY3, AES.MODE_CBC, iv)
 
     decrypted = cipher.decrypt(picc_bytes)
-    print(decrypted.hex())
+
+    if decrypted[0] != 0xC7:
+        raise HTTPException(status_code=400, detail="Invalid PICC data format. Bad KEY3?")
+
+    uid_bytes = decrypted[1:8]
+    ctr_bytes = decrypted[8:11]
+
+    uid_hex = uid_bytes.hex()
+    counter = int.from_bytes(ctr_bytes, byteorder='little')
+
+    tag = await NFCTable.objects().get(NFCTable.uid == uid_hex)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Unrecognized Tag")
+
 
 
 # TODO: Add authentication and input validation
