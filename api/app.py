@@ -77,6 +77,20 @@ async def nfc_auth(tap: NfcRequest):
     if not tag:
         raise HTTPException(status_code=404, detail="Unrecognized Tag")
 
+    k4 = bytes.fromhex(tag.key4)
+
+    csdm = CMAC.new(k4, ciphermod=AES)
+    csdm.update(b'\x3c\xc3\x00\x01\x00\x80' + uid_bytes + ctr_bytes)
+    k_sdm_mac = csdm.digest()
+
+    mac_obj = CMAC.new(k_sdm_mac, ciphermod=AES)
+    full_mac = mac_obj.digest()
+
+    calculated_mac_bytes = bytes([full_mac[i] for i in range(1, 16, 2)])
+    calculated_mac_hex = calculated_mac_bytes.hex().upper()
+
+    if tap.cmac.upper() != calculated_mac_hex:
+        raise HTTPException(status_code=400, detail="CMAC invalid")
 
 
 # TODO: Add authentication and input validation
