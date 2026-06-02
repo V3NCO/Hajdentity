@@ -105,6 +105,8 @@
                 starlette
                 fastapi
                 pycryptodome
+                pyjwt
+                pwdlib
 
                 (buildPythonPackage rec {
                   pname = "piccolo-api";
