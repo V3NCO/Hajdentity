@@ -4,7 +4,7 @@ import datetime
 from fastapi import FastAPI, HTTPException, APIRouter, Depends
 from piccolo.engine import engine_finder
 import uuid
-from pydantic import BaseModel
+from pydantic import UUID4, BaseModel
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from helpers import diversify_key
@@ -69,7 +69,7 @@ class NfcRequest(BaseModel):
 
 class ProvisionRequest(BaseModel):
   uid: str
-  user_id: str
+  haj_id: UUID4
 
 @api.get("/")
 async def test():
@@ -115,28 +115,33 @@ async def nfc_auth(tap: NfcRequest):
 # TODO: Add authentication and input validation
 @api.post('/nfc/provision')
 async def provision(req: ProvisionRequest, current_user = Depends(get_current_active_user)):
-  try:
-    uid = bytes.fromhex(req.uid)
-  except Exception:
-    raise HTTPException(status_code=400, detail="Invalid UID")
-  key0 = secrets.token_bytes(16) # this one is the lock, you cant write or read secret data from the tag without it
-  key3= KEY3 # this one has to be the same for everyone because when we have to decrypt picc we dont know the uid yet
-  key4 = diversify_key(MASTER_KEY, uid, SYSTEM_ID) # signature key
+  if(HajInfo.exists().where((HajInfo.uuid == req.haj_id) & (current_user.id == HajInfo.human))):
+    try:
+      uid = bytes.fromhex(req.uid)
+    except Exception:
+      raise HTTPException(status_code=400, detail="Invalid UID")
+    key0 = secrets.token_bytes(16) # this one is the lock, you cant write or read secret data from the tag without it
+    key3= KEY3 # this one has to be the same for everyone because when we have to decrypt picc we dont know the uid yet
+    key4 = diversify_key(MASTER_KEY, uid, SYSTEM_ID) # signature key
 
-  existing = await NFCTable.objects().get(NFCTable.uid == uid.hex())
-  if existing:
-    raise HTTPException(status_code=403, detail="This tag uid already exists, please contact the admin if it's an issue for you")
+    existing = await NFCTable.exists().where(NFCTable.uid == uid.hex())
+    if existing:
+      raise HTTPException(status_code=403, detail="This tag uid already exists, please contact the admin if it's an issue for you")
 
-  tag = NFCTable(uid=uid.hex(), user_id=req.user_id, key0=key0.hex(), key4=key4.hex(), status="active", created_at = datetime.datetime.now())
-  await tag.save()
+    tag = NFCTable(uid=uid.hex(), haj_id=req.haj_id, key0=key0.hex(), key4=key4.hex(), status="active", created_at = datetime.datetime.now())
+    await tag.save()
 
-  return {
-    "status": "ok",
-    "user_id": req.user_id,
-    "key0": key0.hex(),
-    "key3": key3.hex(),
-    "key4": key4.hex()
-  }
+    return {
+      "status": "ok",
+      "inserted": {
+        "haj_id": req.haj_id,
+        "key0": key0.hex(),
+        "key3": key3.hex(),
+        "key4": key4.hex()
+      }
+    }
+  else:
+    raise HTTPException(401, "This blahaj is either not yours or doesn't exist.")
 
 
 @api.post('/haj/create')
