@@ -3,7 +3,7 @@ import uuid
 import jwt
 from datetime import datetime, timedelta, timezone
 from pwdlib import PasswordHash
-from pydantic import BaseModel
+from pydantic import UUID4, BaseModel
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -29,6 +29,7 @@ class TokenData(BaseModel):
 
 
 class User(BaseModel):
+  id: UUID4
   username: str
   public_key: str | None = None
   disabled: bool | None = None

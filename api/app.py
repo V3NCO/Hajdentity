@@ -1,22 +1,21 @@
-from ast import Return
 from contextlib import asynccontextmanager
 import datetime
-from email.policy import HTTP
 
 from fastapi import FastAPI, HTTPException, APIRouter, Depends
 from piccolo.engine import engine_finder
-
+import uuid
 from pydantic import BaseModel
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from helpers import diversify_key
 from constants import MASTER_KEY, KEY3, SYSTEM_ID, ACCESS_TOKEN_EXPIRE_MINUTES
 import secrets
-from home.tables import NFCTable
-import logging
+from home.tables import HajInfo, NFCTable
 from auth import create_access_token, create_user, authenticate_user, get_current_active_user
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
+from typing import Annotated
+from pydantic import Field
 
 
 
@@ -47,10 +46,21 @@ app = FastAPI(lifespan=lifespan)
 api = APIRouter(prefix="/api")
 
 class NewHajRequest(BaseModel):
-
+  name: Annotated[str, Field(max_length=48, )]
+  date: datetime.date
+  size: float
+  location: str | None = None
+  description: str
+  pronouns: Annotated[str, Field(max_length=32)] | None = None
+  gender: Annotated[str, Field(max_length=96)] | None = None
+  floof: Annotated[int, Field(ge=1, le=10)] | None = None
+  squish: Annotated[int, Field(ge=1, le=10)] | None = None
+  lastwashed: datetime.datetime | None = None
+  mloftearsabsorbed: float | None = None
 
 class RegisterRequest(BaseModel):
   username: str
+  email: str
   password: str
 
 class NfcRequest(BaseModel):
@@ -127,6 +137,47 @@ async def provision(req: ProvisionRequest, current_user = Depends(get_current_ac
     "key3": key3.hex(),
     "key4": key4.hex()
   }
+
+
+@api.post('/haj/create')
+async def add_haj(req: NewHajRequest, current_user = Depends(get_current_active_user)):
+  try:
+    haj_id = uuid.uuid4()
+    await HajInfo(
+      uuid=haj_id,
+      human=current_user.id,
+      name=req.name,
+      date=req.date,
+      size = req.size,
+      location = req.location,
+      description = req.description,
+      pronouns = req.pronouns,
+      gender = req.gender,
+      floof = req.floof,
+      squish = req.squish,
+      lastwashed = req.lastwashed,
+      mloftearsabsorbed= req.mloftearsabsorbed
+    ).save()
+    return {
+      "status": "OK",
+      "inserted": {
+        "uuid": haj_id,
+        "human": current_user.id,
+        "name": req.name,
+        "date": req.date,
+        "size": req.size,
+        "location": req.location,
+        "description": req.description,
+        "pronouns": req.pronouns,
+        "gender": req.gender,
+        "floof": req.floof,
+        "squish": req.squish,
+        "lastwashed": req.lastwashed,
+        "mloftearsabsorbed": req.mloftearsabsorbed
+      }
+    }
+  except Exception as e:
+    raise HTTPException(500, f"An internal error occured, please try again or contact the administrator with {e}")
 
 @api.post('/auth/register')
 async def register(req: RegisterRequest):
