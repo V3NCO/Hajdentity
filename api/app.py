@@ -68,7 +68,7 @@ class NfcRequest(BaseModel):
   cmac: str
 
 class ProvisionRequest(BaseModel):
-  uid: str
+  tag_id: str
   haj_id: UUID4
 
 @api.get("/")
@@ -112,23 +112,27 @@ async def nfc_auth(tap: NfcRequest):
       raise HTTPException(status_code=400, detail="CMAC invalid")
 
 
-# TODO: Add authentication and input validation
+# TODO: Add input validation
 @api.post('/nfc/provision')
 async def provision(req: ProvisionRequest, current_user = Depends(get_current_active_user)):
-  if(HajInfo.exists().where((HajInfo.uuid == req.haj_id) & (current_user.id == HajInfo.human))):
+  exists = await HajInfo.exists().where(
+      HajInfo.uuid == req.haj_id,
+      HajInfo.human == current_user.id,
+  )
+  if exists:
     try:
-      uid = bytes.fromhex(req.uid)
+      tag_id = bytes.fromhex(req.tag_id)
     except Exception:
       raise HTTPException(status_code=400, detail="Invalid UID")
     key0 = secrets.token_bytes(16) # this one is the lock, you cant write or read secret data from the tag without it
     key3= KEY3 # this one has to be the same for everyone because when we have to decrypt picc we dont know the uid yet
-    key4 = diversify_key(MASTER_KEY, uid, SYSTEM_ID) # signature key
+    key4 = diversify_key(MASTER_KEY, tag_id, SYSTEM_ID) # signature key
 
-    existing = await NFCTable.exists().where(NFCTable.uid == uid.hex())
+    existing = await NFCTable.exists().where(NFCTable.uid == tag_id.hex())
     if existing:
       raise HTTPException(status_code=403, detail="This tag uid already exists, please contact the admin if it's an issue for you")
 
-    tag = NFCTable(uid=uid.hex(), haj_id=req.haj_id, key0=key0.hex(), key4=key4.hex(), status="active", created_at = datetime.datetime.now())
+    tag = NFCTable(uid=tag_id.hex(), haj_id=req.haj_id, key0=key0.hex(), key4=key4.hex(), status="active", created_at = datetime.datetime.now())
     await tag.save()
 
     return {
