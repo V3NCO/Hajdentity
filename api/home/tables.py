@@ -3,13 +3,13 @@ from piccolo.columns import UUID, Timestamptz,  Numeric, Date, Varchar, Integer,
 
 
 class NFCTable(Table):
-    uid = Varchar(length=14, unique=True, index=True)
-    user_id = Varchar()
-    key0 = Text()
-    key4 = Text()
-    last_counter = Integer(default=0)
-    status = Varchar()
-    created_at = Time()
+  uid = Varchar(length=14, unique=True, index=True)
+  user_id = Varchar()
+  key0 = Text()
+  key4 = Text()
+  last_counter = Integer(default=0)
+  status = Varchar()
+  created_at = Time()
 
 
 # From former Blahaj Identity:
@@ -47,8 +47,8 @@ class HajInfo(Table):
 
 
 class Humans(Table):
-    id = UUID(primary_key=True, null=False)
-    username = Varchar(length=100, unique=True, null=False)
-    email = Varchar(length=256, unique=True, null=False)
-    hashed_password = Varchar(length=512, null=True)
-    disabled = Boolean(default=False)
+  id = UUID(primary_key=True, null=False)
+  username = Varchar(length=100, unique=True, null=False)
+  email = Varchar(length=256, unique=True, null=False)
+  hashed_password = Varchar(length=512, null=True)
+  disabled = Boolean(default=False)

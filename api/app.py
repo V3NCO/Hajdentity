@@ -46,62 +46,65 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 api = APIRouter(prefix="/api")
 
+class NewHajRequest(BaseModel):
+
+
 class RegisterRequest(BaseModel):
-    username: str
-    password: str
+  username: str
+  password: str
 
 class NfcRequest(BaseModel):
-    picc_data: str
-    cmac: str
+  picc_data: str
+  cmac: str
 
 class ProvisionRequest(BaseModel):
-    uid: str
-    user_id: str
+  uid: str
+  user_id: str
 
 @api.get("/")
 async def test():
-    return "API is UP!"
+  return "API is UP!"
 
 @api.post("/nfc/auth")
 async def nfc_auth(tap: NfcRequest):
-    picc_bytes = bytes.fromhex(tap.picc_data)
-    iv = b'\x00' * 16
-    cipher = AES.new(KEY3, AES.MODE_CBC, iv)
+  picc_bytes = bytes.fromhex(tap.picc_data)
+  iv = b'\x00' * 16
+  cipher = AES.new(KEY3, AES.MODE_CBC, iv)
 
-    decrypted = cipher.decrypt(picc_bytes)
+  decrypted = cipher.decrypt(picc_bytes)
 
-    if decrypted[0] != 0xC7:
-        raise HTTPException(status_code=400, detail="Invalid PICC data format. Bad KEY3?")
+  if decrypted[0] != 0xC7:
+    raise HTTPException(status_code=400, detail="Invalid PICC data format. Bad KEY3?")
 
-    uid_bytes = decrypted[1:8]
-    ctr_bytes = decrypted[8:11]
+  uid_bytes = decrypted[1:8]
+  ctr_bytes = decrypted[8:11]
 
-    uid_hex = uid_bytes.hex()
-    counter = int.from_bytes(ctr_bytes, byteorder='little')
+  uid_hex = uid_bytes.hex()
+  counter = int.from_bytes(ctr_bytes, byteorder='little')
 
-    tag = await NFCTable.objects().get(NFCTable.uid == uid_hex)
-    if not tag:
-        raise HTTPException(status_code=404, detail="Unrecognized Tag")
+  tag = await NFCTable.objects().get(NFCTable.uid == uid_hex)
+  if not tag:
+      raise HTTPException(status_code=404, detail="Unrecognized Tag")
 
-    k4 = bytes.fromhex(tag.key4)
+  k4 = bytes.fromhex(tag.key4)
 
-    csdm = CMAC.new(k4, ciphermod=AES)
-    csdm.update(b'\x3c\xc3\x00\x01\x00\x80' + uid_bytes + ctr_bytes)
-    k_sdm_mac = csdm.digest()
+  csdm = CMAC.new(k4, ciphermod=AES)
+  csdm.update(b'\x3c\xc3\x00\x01\x00\x80' + uid_bytes + ctr_bytes)
+  k_sdm_mac = csdm.digest()
 
-    mac_obj = CMAC.new(k_sdm_mac, ciphermod=AES)
-    full_mac = mac_obj.digest()
+  mac_obj = CMAC.new(k_sdm_mac, ciphermod=AES)
+  full_mac = mac_obj.digest()
 
-    calculated_mac_bytes = bytes([full_mac[i] for i in range(1, 16, 2)])
-    calculated_mac_hex = calculated_mac_bytes.hex().upper()
+  calculated_mac_bytes = bytes([full_mac[i] for i in range(1, 16, 2)])
+  calculated_mac_hex = calculated_mac_bytes.hex().upper()
 
-    if tap.cmac.upper() != calculated_mac_hex:
-        raise HTTPException(status_code=400, detail="CMAC invalid")
+  if tap.cmac.upper() != calculated_mac_hex:
+      raise HTTPException(status_code=400, detail="CMAC invalid")
 
 
 # TODO: Add authentication and input validation
 @api.post('/nfc/provision')
-async def provision(req: ProvisionRequest):
+async def provision(req: ProvisionRequest, current_user = Depends(get_current_active_user)):
   try:
     uid = bytes.fromhex(req.uid)
   except Exception:
@@ -127,23 +130,23 @@ async def provision(req: ProvisionRequest):
 
 @api.post('/auth/register')
 async def register(req: RegisterRequest):
-    res = await create_user(req)
-    if not res.get('ok'):
-        raise HTTPException(status_code=400, detail=str(res.get('error', 'unknown')))
-    return {"status": "ok"}
+  res = await create_user(req)
+  if not res.get('ok'):
+    raise HTTPException(status_code=400, detail=str(res.get('error', 'unknown')))
+  return {"status": "ok"}
 
 
 @api.post('/auth/token')
 async def token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = await authenticate_user(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Incorrect username or password")
-    access_token = create_access_token({"sub": user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    return {"access_token": access_token, "token_type": "bearer"}
+  user = await authenticate_user(form_data.username, form_data.password)
+  if not user:
+    raise HTTPException(status_code=401, detail="Incorrect username or password")
+  access_token = create_access_token({"sub": user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+  return {"access_token": access_token, "token_type": "bearer"}
 
 
 @api.get('/auth/me')
 async def me(current_user = Depends(get_current_active_user)):
-    return {"username": current_user.username, "disabled": current_user.disabled}
+  return {"username": current_user.username, "disabled": current_user.disabled}
 
 app.include_router(api)
