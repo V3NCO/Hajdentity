@@ -1,5 +1,5 @@
 from piccolo.table import Table
-from piccolo.columns import UUID, Timestamptz,  Numeric, Date, Varchar, Integer, Time, Text
+from piccolo.columns import UUID, Timestamptz,  Numeric, Date, Varchar, Integer, Time, Text, Boolean
 
 
 class NFCTable(Table):
@@ -32,6 +32,7 @@ class NFCTable(Table):
 
 class HajInfo(Table):
   uuid = UUID(unique=True, null=False, index=True)
+  human = UUID(null=False)
   name = Varchar(255, null=False)
   date = Date()
   size = Numeric(null=False)
@@ -40,6 +41,14 @@ class HajInfo(Table):
   pronouns = Varchar(255)
   gender = Varchar(255)
   floof = Integer()
-  squish = Integer(),
+  squish = Integer()
   lastwashed = Timestamptz()
   mloftearsabsorbed = Numeric()
+
+
+class Humans(Table):
+    id = UUID(primary_key=True, null=False)
+    username = Varchar(length=100, unique=True, null=False)
+    email = Varchar(length=256, unique=True, null=False)
+    hashed_password = Varchar(length=512, null=True)
+    disabled = Boolean(default=False)

@@ -3,17 +3,20 @@ from contextlib import asynccontextmanager
 import datetime
 from email.policy import HTTP
 
-from fastapi import FastAPI, HTTPException, APIRouter
+from fastapi import FastAPI, HTTPException, APIRouter, Depends
 from piccolo.engine import engine_finder
 
 from pydantic import BaseModel
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from helpers import diversify_key
-from constants import MASTER_KEY, KEY3, SYSTEM_ID
+from constants import MASTER_KEY, KEY3, SYSTEM_ID, ACCESS_TOKEN_EXPIRE_MINUTES
 import secrets
 from home.tables import NFCTable
 import logging
+from auth import create_access_token, create_user, authenticate_user, get_current_active_user
+from fastapi.security import OAuth2PasswordRequestForm
+from datetime import timedelta
 
 
 
@@ -43,6 +46,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 api = APIRouter(prefix="/api")
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
 
 class NfcRequest(BaseModel):
     picc_data: str
@@ -118,4 +124,26 @@ async def provision(req: ProvisionRequest):
     "key3": key3.hex(),
     "key4": key4.hex()
   }
+
+@api.post('/auth/register')
+async def register(req: RegisterRequest):
+    res = await create_user(req)
+    if not res.get('ok'):
+        raise HTTPException(status_code=400, detail=str(res.get('error', 'unknown')))
+    return {"status": "ok"}
+
+
+@api.post('/auth/token')
+async def token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = await authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    access_token = create_access_token({"sub": user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@api.get('/auth/me')
+async def me(current_user = Depends(get_current_active_user)):
+    return {"username": current_user.username, "disabled": current_user.disabled}
+
 app.include_router(api)

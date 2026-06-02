@@ -4,3 +4,6 @@ SYSTEM_ID = bytes.fromhex("48414A")
 MASTER_KEY = bytes.fromhex("508575b21dfec2d4c8b0b735d4a3edf7") # i cba to store it for now i just want a POC
 BASE_URL="https://id.blahaj.engineering/api/nfc/auth"
 KEY3 = bytes.fromhex("ea2810a16aa08093c1fd27f337d8092b")
+SECRET_KEY = "42230da4e5de948ab6b24bbae21d24ea018f1d5045b8bcaee9ef238b8c32517c4d6ea3246ab4c4d3eb46e4d596db2953626d48e8c9e268f3db8f7aefd1a78700"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ALGORITHM = "HS256"
