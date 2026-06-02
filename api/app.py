@@ -4,7 +4,7 @@ import datetime
 from fastapi import FastAPI, HTTPException, APIRouter, Depends
 from piccolo.engine import engine_finder
 import uuid
-from pydantic import UUID4, BaseModel
+from pydantic import UUID4, BaseModel, EmailStr
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from helpers import diversify_key
@@ -65,9 +65,9 @@ class NewHajRequest(BaseModel):
   mloftearsabsorbed: float | None = None
 
 class RegisterRequest(BaseModel):
-  username: str
-  email: str
-  password: str
+  username: Annotated[str, Field(min_length=3, max_length=96, pattern=r'^\w+$')]
+  email: EmailStr
+  password: Annotated[str, Field(min_length=16)]
 
 class NfcRequest(BaseModel):
   picc_data: str

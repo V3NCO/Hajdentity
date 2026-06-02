@@ -79,9 +79,12 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 async def create_user(form_data):
   # form_data is expected to have 'username' and 'password' attributes
-  exists = await Humans.exists().where(Humans.username == form_data.username)
-  if exists:
+  unameexists = await Humans.exists().where(Humans.username == form_data.username)
+  emailexists = await Humans.exists().where(Humans.email == form_data.email)
+  if unameexists:
     return {"ok": False, "error": "This username is taken!"}
+  if emailexists:
+      return {"ok": False, "error": "This email is taken!"}
   try:
     pwd = get_password_hash(form_data.password)
     # create with explicit UUID to avoid depending on DB defaults
