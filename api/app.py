@@ -22,6 +22,9 @@ from pydantic import Field
 async def open_database_connection_pool():
     try:
         engine = engine_finder()
+        if engine is None:
+          print("No Piccolo engine configured; skipping")
+          return
         await engine.start_connection_pool()
     except Exception:
         print("Unable to connect to the database")
@@ -30,6 +33,9 @@ async def open_database_connection_pool():
 async def close_database_connection_pool():
     try:
         engine = engine_finder()
+        if engine is None:
+          print("No Piccolo engine configured; skipping")
+          return
         await engine.close_connection_pool()
     except Exception:
         print("Unable to connect to the database")
