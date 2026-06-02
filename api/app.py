@@ -68,7 +68,7 @@ class NfcRequest(BaseModel):
   cmac: str
 
 class ProvisionRequest(BaseModel):
-  tag_id: str
+  tag_id: Annotated[str, Field(min_length=14, max_length=14, pattern=r'^[0-9a-fA-F]{14}$')]
   haj_id: UUID4
 
 @api.get("/")
@@ -112,7 +112,6 @@ async def nfc_auth(tap: NfcRequest):
       raise HTTPException(status_code=400, detail="CMAC invalid")
 
 
-# TODO: Add input validation
 @api.post('/nfc/provision')
 async def provision(req: ProvisionRequest, current_user = Depends(get_current_active_user)):
   exists = await HajInfo.exists().where(
