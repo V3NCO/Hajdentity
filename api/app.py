@@ -65,7 +65,7 @@ class NewHajRequest(BaseModel):
   mloftearsabsorbed: float | None = None
 
 class RegisterRequest(BaseModel):
-  username: Annotated[str, Field(min_length=3, max_length=96, pattern=r'^[a-zA-Z0-9_-]$')]
+  username: Annotated[str, Field(min_length=3, max_length=96, pattern=r'^[a-zA-Z0-9_-]+$')]
   email: EmailStr
   password: Annotated[str, Field(min_length=16)]
 
