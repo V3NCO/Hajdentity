@@ -41,14 +41,15 @@ async function onSubmit() {
         v-model="username"
         id="username"
         name="username"
+        placeholder="Your Human name :3"
         type="text"
         minlength=3
         maxlength=96
         pattern="(?:[A-Za-z0-9_]|-){3,96}"
         required
       />
-      <input v-model="email" id="email" name="email" type="email" required/>
-      <input v-model="password" id="password" name="password" type="password" minlength=16 required/>
+      <input v-model="email" id="email" name="email" type="email" placeholder="Email address!" required/>
+      <input v-model="password" id="password" name="password" type="password" placeholder="Veri secure password" minlength=16 required/>
       <button type="submit">Submit</button>
     </form>
   </div>
@@ -91,9 +92,30 @@ body {
     background-image: linear-gradient(147deg, #F1CBBFCC, #F3A9BACC);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    display: flex;
     border-radius: 18px;
     border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  height: 100%;
+}
+
+input {
+  width: 80%;
+  height: 1.75rem;
+  border-radius: 10rem;
+}
+
+button {
+  margin-top: 1em;
+  width: 80%;
+  height: 2.5rem;
+  border-radius: 10rem;
 }
 
 input:user-invalid {
