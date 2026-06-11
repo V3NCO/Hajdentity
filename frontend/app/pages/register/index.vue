@@ -19,14 +19,36 @@ const username = ref('')
 const email = ref('')
 const password = ref('')
 
-async function onSubmit() {
-  const form = registerForm.value
-  if (!form) return
+type FieldErrors = Partial<Record<'username' | 'email' | 'password', string>>
+const errors = ref<FieldErrors>({})
 
-  if (!form.checkValidity()) {
-    form.reportValidity()
-    return
-  }
+function validate() {
+  const next: FieldErrors = {}
+
+  const u = username.value
+  if (!u) next.username = 'Username is required'
+  else if (u.length < 3) next.username = 'Username must be at least 3 characters'
+  else if (u.length > 96) next.username = 'Username must be at most 96 characters'
+  else if (!/^(?:[A-Za-z0-9_]|-){3,96}$/.test(u)) next.username = 'Only letters, numbers, underscores, and hyphens allowed'
+
+  const e = email.value
+  if (!e) next.email = 'Email is required'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) next.email = 'Enter a valid email address'
+
+  const p = password.value
+  if (!p) next.password = 'Password is required'
+  else if (p.length < 16) next.password = 'Password must be at least 16 characters'
+
+  errors.value = next
+  return Object.keys(next).length === 0
+}
+
+function onInput() {
+  validate()
+}
+
+async function onSubmit() {
+  if (!validate()) return
 
   await $fetch("/api/auth/register", { method: 'POST', body: { username: username.value, email: email.value, password: password.value } })
 }
@@ -37,8 +59,10 @@ async function onSubmit() {
 <div class="rcont">
   <div class="vcont">
     <form ref="registerForm" @submit.prevent="onSubmit">
+      <h1>Register</h1>
       <input
         v-model="username"
+        @input="onInput"
         id="username"
         name="username"
         placeholder="Your Human name :3"
@@ -48,8 +72,28 @@ async function onSubmit() {
         pattern="(?:[A-Za-z0-9_]|-){3,96}"
         required
       />
-      <input v-model="email" id="email" name="email" type="email" placeholder="Email address!" required/>
-      <input v-model="password" id="password" name="password" type="password" placeholder="Veri secure password" minlength=16 required/>
+      <p v-if="errors.username" class="err">{{ errors.username }}</p>
+      <input
+        v-model="email"
+        @input="onInput"
+        id="email"
+        name="email"
+        type="email"
+        placeholder="Email address!"
+        required
+      />
+      <p v-if="errors.email" class="err">{{ errors.email }}</p>
+      <input
+        v-model="password"
+        @input="onInput"
+        id="password"
+        name="password"
+        type="password"
+        placeholder="Veri secure password"
+        minlength=16
+        required
+      />
+      <p v-if="errors.password" class="err">{{ errors.password }}</p>
       <button type="submit">Submit</button>
     </form>
   </div>
@@ -65,7 +109,9 @@ html, body {
 body {
   overflow: hidden;
   background-image: url("/stocksharks.jpeg");
-  /*Eventually this would be an animated carousel of shark images from users*/
+  font-family: "Noto Sans";
+  /* Eventually this would be an animated carousel of shark images from users */
+  /* Maybe scrolling cards, because simple images side by side would look wrong and blending them with gradients would look wrong too */
 }
 
 #app, #__nuxt {
@@ -89,7 +135,7 @@ body {
     padding: 1em;
     height: 100%;
     width: 100%;
-    background-image: linear-gradient(147deg, #F1CBBFCC, #F3A9BACC);
+    background-image: linear-gradient(147deg, #9FB2CACC, #5D7798CC);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 18px;
@@ -107,18 +153,14 @@ form {
 
 input {
   width: 80%;
-  height: 1.75rem;
+  height: 4%;
   border-radius: 10rem;
+  padding: 0.25rem 0.25rem 0.25rem 2rem
 }
 
 button {
   margin-top: 1em;
   width: 80%;
   height: 2.5rem;
-  border-radius: 10rem;
-}
-
-input:user-invalid {
-  box-shadow: 0 0 5px 1px red;
 }
 </style>
