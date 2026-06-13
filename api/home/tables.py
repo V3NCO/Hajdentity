@@ -51,4 +51,5 @@ class Humans(Table):
   username = Varchar(length=100, unique=True, null=False)
   email = Varchar(length=256, unique=True, null=False)
   hashed_password = Varchar(length=512, null=True)
+  verified = Boolean(default=False)
   disabled = Boolean(default=False)

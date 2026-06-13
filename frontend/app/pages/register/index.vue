@@ -60,6 +60,7 @@ async function onSubmit() {
   if (!validate('all')) return
 
   await $fetch("/api/auth/register", { method: 'POST', body: { username: username.value, email: email.value, password: password.value } })
+  await navigateTo('/register/verify')
 }
 
 </script>

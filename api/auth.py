@@ -4,10 +4,10 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from pwdlib import PasswordHash
 from pydantic import UUID4, BaseModel
-
+import smtplib
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-
+from email.mime.text import MIMEText
 from home.tables import Humans
 import constants
 
