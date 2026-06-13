@@ -22,33 +22,42 @@ const password = ref('')
 type FieldErrors = Partial<Record<'username' | 'email' | 'password', string>>
 const errors = ref<FieldErrors>({})
 
-function validate() {
-  const next: FieldErrors = {}
+function validate(field: 'all' | 'username' | 'email' | 'password') {
+  const next: FieldErrors = { ...errors.value }
 
-  const u = username.value
-  if (!u) next.username = 'Username is required'
-  else if (u.length < 3) next.username = 'Username must be at least 3 characters'
-  else if (u.length > 96) next.username = 'Username must be at most 96 characters'
-  else if (!/^(?:[A-Za-z0-9_]|-){3,96}$/.test(u)) next.username = 'Only letters, numbers, underscores, and hyphens allowed'
+  if (field === "all" || field === "username") {
+    delete next.username
+    const u = username.value
+    if (!u) next.username = 'Username is required'
+    else if (u.length < 3) next.username = 'Username must be at least 3 characters'
+    else if (u.length > 96) next.username = 'Username must be at most 96 characters'
+    else if (!/^(?:[A-Za-z0-9_]|-){3,96}$/.test(u)) next.username = 'Only letters, numbers, underscores, and hyphens allowed'
+  }
 
-  const e = email.value
-  if (!e) next.email = 'Email is required'
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) next.email = 'Enter a valid email address'
+  if (field === "all" || field === "email") {
+    delete next.email
+    const e = email.value
+    if (!e) next.email = 'Email is required'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) next.email = 'Enter a valid email address'
+  }
 
-  const p = password.value
-  if (!p) next.password = 'Password is required'
-  else if (p.length < 16) next.password = 'Password must be at least 16 characters'
+  if (field === "all" || field === "password") {
+    delete next.password
+    const p = password.value
+    if (!p) next.password = 'Password is required'
+    else if (p.length < 16) next.password = 'Password must be at least 16 characters'
+  }
 
   errors.value = next
   return Object.keys(next).length === 0
 }
 
-function onInput() {
-  validate()
+function onInput(field: 'username' | 'email' | 'password') {
+  validate(field)
 }
 
 async function onSubmit() {
-  if (!validate()) return
+  if (!validate('all')) return
 
   await $fetch("/api/auth/register", { method: 'POST', body: { username: username.value, email: email.value, password: password.value } })
 }
@@ -58,11 +67,11 @@ async function onSubmit() {
 <template>
 <div class="rcont">
   <div class="vcont">
-    <form ref="registerForm" @submit.prevent="onSubmit">
+    <form ref="registerForm" @submit.prevent="onSubmit" novalidate>
       <h1>Register</h1>
       <input
         v-model="username"
-        @input="onInput"
+        @input="onInput('username')"
         id="username"
         name="username"
         placeholder="Your Human name :3"
@@ -72,20 +81,26 @@ async function onSubmit() {
         pattern="(?:[A-Za-z0-9_]|-){3,96}"
         required
       />
-      <p v-if="errors.username" class="err">{{ errors.username }}</p>
+      <p v-if="errors.username" class="err">
+        <Icon name="material-symbols:error" style="justify-self: center;"/>
+        {{ errors.username }}
+      </p>
       <input
         v-model="email"
-        @input="onInput"
+        @input="onInput('email')"
         id="email"
         name="email"
         type="email"
         placeholder="Email address!"
         required
       />
-      <p v-if="errors.email" class="err">{{ errors.email }}</p>
+      <p v-if="errors.email" class="err">
+        <Icon name="material-symbols:error" />
+        {{ errors.email }}
+      </p>
       <input
         v-model="password"
-        @input="onInput"
+        @input="onInput('password')"
         id="password"
         name="password"
         type="password"
@@ -93,7 +108,10 @@ async function onSubmit() {
         minlength=16
         required
       />
-      <p v-if="errors.password" class="err">{{ errors.password }}</p>
+      <p v-if="errors.password" class="err">
+        <Icon name="material-symbols:error" />
+        {{ errors.password }}
+      </p>
       <button type="submit">Submit</button>
     </form>
   </div>
@@ -109,7 +127,7 @@ html, body {
 body {
   overflow: hidden;
   background-image: url("/stocksharks.jpeg");
-  font-family: "Noto Sans";
+  font-family: "Arial";
   /* Eventually this would be an animated carousel of shark images from users */
   /* Maybe scrolling cards, because simple images side by side would look wrong and blending them with gradients would look wrong too */
 }

@@ -59,6 +59,11 @@ input:user-invalid {
   font-weight: 600;
   margin: -0.5rem 0 0 0;
   text-align: left;
-  align-self:baseline
+  align-self:auto;
+  padding: 0.25rem 0.75rem 0.25rem 0.75rem;
+  border-radius: 3em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
 }
 </style>
