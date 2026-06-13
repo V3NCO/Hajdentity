@@ -4,17 +4,15 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from pwdlib import PasswordHash
 from pydantic import UUID4, BaseModel
-import smtplib
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from email.mime.text import MIMEText
 from home.tables import Humans
-import constants
+from config import settings
 
 password_hash = PasswordHash.recommended()
-SECRET_KEY = constants.SECRET_KEY
-ALGORITHM = constants.ALGORITHM
-ACCESS_TOKEN_EXPIRE_MINUTES = constants.ACCESS_TOKEN_EXPIRE_MINUTES
+SECRET_KEY = settings.secret_key
+ALGORITHM = settings.algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 

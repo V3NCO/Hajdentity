@@ -100,10 +100,12 @@
                 venvShellHook
                 pip
 
+                pydantic-settings
                 piccolo
                 uvicorn
                 starlette
                 fastapi
+                fastapi-mail
                 pycryptodome
                 pyjwt
                 pwdlib

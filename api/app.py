@@ -8,7 +8,7 @@ from pydantic import UUID4, BaseModel, EmailStr
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from helpers import diversify_key
-from constants import MASTER_KEY, KEY3, SYSTEM_ID, ACCESS_TOKEN_EXPIRE_MINUTES
+from config import settings
 import secrets
 from home.tables import HajInfo, NFCTable
 from auth import create_access_token, create_user, authenticate_user, get_current_active_user
@@ -85,7 +85,7 @@ async def test():
 async def nfc_auth(tap: NfcRequest):
   picc_bytes = bytes.fromhex(tap.picc_data)
   iv = b'\x00' * 16
-  cipher = AES.new(KEY3, AES.MODE_CBC, iv)
+  cipher = AES.new(settings.key3, AES.MODE_CBC, iv)
 
   decrypted = cipher.decrypt(picc_bytes)
 
@@ -130,8 +130,8 @@ async def provision(req: ProvisionRequest, current_user = Depends(get_current_ac
     except Exception:
       raise HTTPException(status_code=400, detail="Invalid UID")
     key0 = secrets.token_bytes(16) # this one is the lock, you cant write or read secret data from the tag without it
-    key3= KEY3 # this one has to be the same for everyone because when we have to decrypt picc we dont know the uid yet
-    key4 = diversify_key(MASTER_KEY, tag_id, SYSTEM_ID) # signature key
+    key3 = settings.key3 # this one has to be the same for everyone because when we have to decrypt picc we dont know the uid yet
+    key4 = diversify_key(settings.master_key, tag_id, settings.system_id) # signature key
 
     existing = await NFCTable.exists().where(NFCTable.uid == tag_id.hex())
     if existing:
@@ -206,7 +206,7 @@ async def token(form_data: OAuth2PasswordRequestForm = Depends()):
   user = await authenticate_user(form_data.username, form_data.password)
   if not user:
     raise HTTPException(status_code=401, detail="Incorrect username or password")
-  access_token = create_access_token({"sub": user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+  access_token = create_access_token({"sub": user.username}, expires_delta=timedelta(minutes=settings.access_token_expire_minutes))
   return {"access_token": access_token, "token_type": "bearer"}
 
 
