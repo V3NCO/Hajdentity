@@ -31,6 +31,7 @@ class User(BaseModel):
   username: str
   public_key: str | None = None
   disabled: bool | None = None
+  verified: bool | None = None
 
 
 class UserInDB(User):
@@ -121,13 +122,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
   if current_user.disabled:
     raise HTTPException(status_code=400, detail="Inactive user")
+  if not current_user.verified:
+    raise HTTPException(status_code=400, detail="User not verified")
   return current_user
 
 def create_verification_token(email: str) -> str:
   return jwt.encode({
     "sub": email,
     "type": "verify",
-    "exp": datetime.now(timezone.utc) + timedelta(hours=24)
+    "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
   }, SECRET_KEY, algorithm=ALGORITHM)
 
 def verify_email_token(token: str) -> str | None:
@@ -135,6 +138,9 @@ def verify_email_token(token: str) -> str | None:
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     if payload.get("type") != "verify":
       return None
+    expiration: datetime | None = payload.get("exp")
+    if expiration is None or expiration < datetime.now(timezone.utc):
+        return None
     return payload.get("sub")
   except jwt.PyJWTError:
     return None
