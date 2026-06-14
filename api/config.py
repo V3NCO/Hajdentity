@@ -43,6 +43,13 @@ class MailSettings(BaseSettings):
     use_creds: bool = True
     validate_certs : bool = True
 
+class DatabaseSettings(BaseSettings):
+    database: str = "hajdentity"
+    user: str = "postgres"
+    password: str = ""
+    host: str = "localhost"
+    port: int = 5432
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix='HAJDENTITY_',  env_nested_delimiter='__')
     master_key: MasterKey # 16 bytes AES 128 master key
@@ -54,6 +61,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30 # Minutes until user sessions expires
     algorithm: str = "HS256" # encryption algorithm of user passwords in database
     mail: MailSettings = MailSettings()
+    db: DatabaseSettings = DatabaseSettings()
 
 settings = Settings()  # type: ignore[reportCallIssue]
 
