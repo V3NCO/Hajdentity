@@ -2,21 +2,22 @@ from contextlib import asynccontextmanager
 import datetime
 
 from fastapi import FastAPI, HTTPException, APIRouter, Depends
+from fastapi_mail import MessageSchema, MessageType
 from piccolo.engine import engine_finder
 import uuid
-from pydantic import UUID4, BaseModel, EmailStr
+from pydantic import UUID4, BaseModel, EmailStr, NameEmail
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from helpers import diversify_key
-from config import settings
+from config import settings, mail
 import secrets
 from home.tables import HajInfo, NFCTable
-from auth import create_access_token, create_user, authenticate_user, get_current_active_user
+from auth import create_access_token, create_user, authenticate_user, get_current_active_user, create_verification_token
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from typing import Annotated
 from pydantic import Field
-
+from emails import verify_mail_template
 
 
 async def open_database_connection_pool():
@@ -198,6 +199,13 @@ async def register(req: RegisterRequest):
   res = await create_user(req)
   if not res.get('ok'):
     raise HTTPException(status_code=400, detail=str(res.get('error', 'unknown')))
+  jwt = create_verification_token(req.email)
+  await mail.send_message(MessageSchema(
+      recipients = [NameEmail(name=req.username, email=req.email)],
+      subject = "Verify your Hajdentity account",
+      body = verify_mail_template(req.username, f"{settings.base_url}register/verify?token={jwt}"),
+      subtype = MessageType.html
+  ))
   return {"status": "ok"}
 
 

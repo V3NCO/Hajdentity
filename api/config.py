@@ -1,6 +1,7 @@
-from pydantic import AfterValidator, Field, HttpUrl
+from pydantic import AfterValidator, EmailStr, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Annotated
+from fastapi_mail import FastMail, ConnectionConfig
 
 def hex_to_bytes(v: str | bytes) -> bytes:
     if isinstance(v, bytes):
@@ -12,7 +13,6 @@ def hex_to_bytes(v: str | bytes) -> bytes:
 
 def ascii_encode(v: str) -> bytes:
     if isinstance(v, bytes):
-        print(v)
         return v
     try:
         return v.encode("ASCII")
@@ -31,15 +31,46 @@ SystemID = Annotated[bytes, AfterValidator(ascii_encode), SystemIDStr]
 Key3Str = Annotated[str, Field(min_length=32, max_length=32)]
 Key3 = Annotated[bytes, AfterValidator(hex_to_bytes), Key3Str]
 
+class MailSettings(BaseSettings):
+    username: str = "name"
+    password: SecretStr = SecretStr("password")
+    from_address: EmailStr = "from@example.com"
+    from_name: str = "Name"
+    port: int = 587
+    server: str = "localhost"
+    starttls: bool = True
+    ssl_tls: bool = False
+    use_creds: bool = True
+    validate_certs : bool = True
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix='hajdentity_')
     master_key: MasterKey # 16 bytes AES 128 master key
     desfire_aid: DesfireAID = bytes.fromhex("48414A") # The application id, like its the global project
     system_id: SystemID # The ASCII bytes of the system identifier for this specific instance of the app, it shouldnt be changed to "prod", rather something describing the instance
-    base_url: HttpUrl = HttpUrl("https://id.blahaj.engineering/api/nfc/auth") # The base URL written to the tag
+    base_url: HttpUrl = HttpUrl("https://id.blahaj.engineering/") # The base URL
     key3: Key3 # Key 3 is used to encode and decode the URL
     secret_key: Annotated[str, Field(min_length=128, max_length=128)]  # Secret key for encryption of user passwords in database
     access_token_expire_minutes: int = 30 # Minutes until user sessions expires
     algorithm: str = "HS256" # encryption algorithm of user passwords in database
+    mail: MailSettings = MailSettings()
 
 settings = Settings()  # type: ignore[reportCallIssue]
+
+
+mail_config = ConnectionConfig(
+    MAIL_USERNAME=settings.mail.username,
+    MAIL_PASSWORD=settings.mail.password,
+    MAIL_FROM=settings.mail.from_address,
+    MAIL_PORT=settings.mail.port,
+    MAIL_SERVER=settings.mail.server,
+    MAIL_FROM_NAME=settings.mail.from_name,
+    MAIL_STARTTLS=settings.mail.starttls,
+    MAIL_SSL_TLS=settings.mail.ssl_tls,
+    USE_CREDENTIALS=settings.mail.use_creds,
+    VALIDATE_CERTS=settings.mail.validate_certs,
+    # TEMPLATE_FOLDER=Path(BASE_DIR, "templates"),
+)
+
+
+mail = FastMail(config=mail_config)
