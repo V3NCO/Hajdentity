@@ -32,19 +32,19 @@ Key3Str = Annotated[str, Field(min_length=32, max_length=32)]
 Key3 = Annotated[bytes, AfterValidator(hex_to_bytes), Key3Str]
 
 class MailSettings(BaseSettings):
-    username: str = "name"
+    username: str = "default"
     password: SecretStr = SecretStr("password")
     from_address: EmailStr = "from@example.com"
-    from_name: str = "Name"
+    from_name: str = "default"
     port: int = 587
-    server: str = "localhost"
+    server: str = "default"
     starttls: bool = True
     ssl_tls: bool = False
     use_creds: bool = True
     validate_certs : bool = True
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix='hajdentity_')
+    model_config = SettingsConfigDict(env_prefix='HAJDENTITY_',  env_nested_delimiter='__')
     master_key: MasterKey # 16 bytes AES 128 master key
     desfire_aid: DesfireAID = bytes.fromhex("48414A") # The application id, like its the global project
     system_id: SystemID # The ASCII bytes of the system identifier for this specific instance of the app, it shouldnt be changed to "prod", rather something describing the instance
