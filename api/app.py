@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 import datetime
-
+from home.tables import Humans
 from fastapi import FastAPI, HTTPException, APIRouter, Depends
 from fastapi_mail import MessageSchema, MessageType
 from piccolo.engine import engine_finder
@@ -12,7 +12,7 @@ from helpers import diversify_key
 from config import settings, mail
 import secrets
 from home.tables import HajInfo, NFCTable
-from auth import create_access_token, create_user, authenticate_user, get_current_active_user, create_verification_token
+from auth import create_access_token, create_user, authenticate_user, get_current_active_user, create_verification_token, verify_email_token
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from typing import Annotated
@@ -64,6 +64,9 @@ class NewHajRequest(BaseModel):
   squish: Annotated[int, Field(ge=1, le=10)] | None = None
   lastwashed: datetime.datetime | None = None
   mloftearsabsorbed: float | None = None
+
+class VerifyRequest(BaseModel):
+    token: str
 
 class RegisterRequest(BaseModel):
   username: Annotated[str, Field(min_length=3, max_length=96, pattern=r'^[a-zA-Z0-9_-]+$')]
@@ -199,15 +202,27 @@ async def register(req: RegisterRequest):
   res = await create_user(req)
   if not res.get('ok'):
     raise HTTPException(status_code=400, detail=str(res.get('error', 'unknown')))
-  jwt = create_verification_token(req.email)
-  await mail.send_message(MessageSchema(
-      recipients = [NameEmail(name=req.username, email=req.email)],
-      subject = "Verify your Hajdentity account",
-      body = verify_mail_template(req.username, f"{settings.base_url}register/verify?token={jwt}"),
-      subtype = MessageType.html
-  ))
+  try:
+    jwt = create_verification_token(req.email)
+    await mail.send_message(MessageSchema(
+        recipients = [NameEmail(name=req.username, email=req.email)],
+        subject = "Verify your Hajdentity account",
+        body = verify_mail_template(req.username, f"{settings.base_url}register/verify?token={jwt}"),
+        subtype = MessageType.html
+    ))
+  except Exception:
+      await Humans.delete().where(Humans.email == req.email)
+      raise HTTPException(status_code=400, detail=str(res.get('error', 'An error occured while sending you an email, please try again later.')))
   return {"status": "ok"}
 
+@api.post('/auth/verify')
+async def verify(req: VerifyRequest):
+  email = verify_email_token(req.token)
+  if email is not None:
+      await Humans.update({Humans.verified: True}).where(Humans.email == email)
+  else:
+      raise HTTPException(status_code=400, detail="Invalid token, it probably expired")
+  return {"status": "ok"}
 
 @api.post('/auth/token')
 async def token(form_data: OAuth2PasswordRequestForm = Depends()):

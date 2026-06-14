@@ -1,4 +1,26 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
+const route = useRoute()
+const { token, sent } = route.query
+const hasToken = ref(false)
+const isSent = ref(false)
+
+if (token) {
+  hasToken.value = true
+  const { data, error } = await useFetch('/api/auth/verify', {
+    method: 'POST',
+    body: {
+      token: token,
+    }
+  })
+
+}
+
+if (sent) {
+  isSent.value = true
+}
+
 useSeoMeta({
   title: 'Verify',
   description: 'Verify your email address!',
@@ -10,6 +32,12 @@ useHead({ htmlAttrs: { lang: 'en' } })
 <template>
 <div class="rcont">
   <div class="vcont">
+    <div v-if="isSent">
+      <h1>Verify your Email</h1>
+      <Icon class="bigicon" name="material-symbols:mark-email-unread-outline"/>
+      <p>We've sent a mail to your inbox, if you don't see it; make sure to check your spam folder.</p>
+      <a href="/register/verify">Resend an email</a>
+    </div>
   </div>
 </div>
 </template>
@@ -46,6 +74,7 @@ body {
 }
 
 .vcont {
+    display: flex;
     padding: 1em;
     height: 100%;
     width: 100%;
@@ -54,15 +83,9 @@ body {
     -webkit-backdrop-filter: blur(10px);
     border-radius: 18px;
     border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  height: 100%;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
 }
 
 input {
@@ -76,5 +99,12 @@ button {
   margin-top: 1em;
   width: 80%;
   height: 2.5rem;
+}
+
+h1 {
+    margin: 1rem;
+}
+.bigicon {
+    font-size: 20vmin;
 }
 </style>
