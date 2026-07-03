@@ -168,6 +168,7 @@ form {
   justify-content: center;
   gap: 1rem;
   height: 100%;
+  width: 100%;
 }
 
 input {
