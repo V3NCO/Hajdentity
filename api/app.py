@@ -241,12 +241,9 @@ async def verify(req: VerifyRequest):
     raise HTTPException(status_code=400, detail="Invalid token")
 
   human = await Humans.objects().get(Humans.email == payload.email)
-  expiration: int | None = int(payload.exp)
-  print(datetime.datetime.fromtimestamp(expiration, timezone.utc))
-  print(datetime.datetime.now(timezone.utc))
   if human is not None and human.verified:
     return {"status": "ok", "email": payload.email}
-  if expiration is None or datetime.datetime.fromtimestamp(expiration, timezone.utc) < datetime.datetime.now(timezone.utc):
+  if payload.exp:
     raise HTTPException(status_code=403, detail="Token expired")
   elif human is not None:
     await Humans.update({Humans.verified: True}).where(Humans.email == payload.email)

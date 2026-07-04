@@ -19,8 +19,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 class VerifPayload(BaseModel):
-  email: str
-  exp: str
+  email: str | None
+  exp: bool
 
 class Token(BaseModel):
   access_token: str
@@ -142,7 +142,10 @@ def verify_email_token(token: str) -> VerifPayload | None:
   try:
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     if payload.get("type") != "verify":
+      print(f"type isnt verify, its {payload.get('type')}")
       return None
-    return VerifPayload(email=str(payload.get("sub")), exp=str(payload.get("exp")))
+    return VerifPayload(email=str(payload.get("sub")), exp=False)
+  except jwt.ExpiredSignatureError:
+    return VerifPayload(email=None, exp=True)
   except jwt.PyJWTError:
     return None

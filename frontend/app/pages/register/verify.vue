@@ -6,6 +6,7 @@ const { token, sent } = route.query
 const email = ref('')
 const isSent = ref(false)
 const isExpired = ref(false)
+const isInvalid = ref(false)
 const isVerified = ref(false)
 
 if (token) {
@@ -21,6 +22,7 @@ if (token) {
 
   if (error.value) {
     if (error.value?.status === 403) { isExpired.value = true; }
+    else if (error.value?.status === 400) { isInvalid.value = true }
   } else {
     isVerified.value = true;
     email.value = data.value?.email ?? ''
@@ -56,7 +58,7 @@ useHead({ htmlAttrs: { lang: 'en' } })
     </div>
     <div v-else-if="isExpired">
       <h1>This token is Expired!</h1>
-      <Icon class="bigicon" name="material-symbols:hourglass-disabled-outline"/>
+      <Icon class="bigicon" name="material-symbols:hourglass-disabled"/>
       <p>You have opened the link too late, please try resending an email with the link below!</p>
       <a href="/register/verify">Resend an email</a>
     </div>
@@ -64,6 +66,13 @@ useHead({ htmlAttrs: { lang: 'en' } })
       <h1>Email Verified!</h1>
       <Icon class="bigicon" name="material-symbols:verified-outline"/>
       <p>Your email {{ email }} is verified, you can now login to your account!</p>
+      <a href="/login">Login</a>
+    </div>
+    <div v-else-if="isInvalid">
+      <h1>This token is Invalid!</h1>
+      <Icon class="bigicon" name="material-symbols:error-outline"/>
+      <p>The token entered could not be verified, please try resending an email with the link below!</p>
+      <a href="/register/verify">Resend an email</a>
     </div>
     <form v-else ref="ResendVerifEmailForm" @submit.prevent="onSubmit" >
       <h1>Resend a verification email</h1>
@@ -145,5 +154,23 @@ h1 {
 }
 .bigicon {
     font-size: 20vmin;
+}
+
+a {
+  border-radius: 10rem;
+  border: 2px solid #95ADB6;
+  background-color: #C3D0D5;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  height: 100%;
+  width: 100%;
 }
 </style>
