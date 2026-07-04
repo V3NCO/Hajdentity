@@ -14,7 +14,7 @@ import secrets
 from home.tables import HajInfo, NFCTable
 from auth import create_access_token, create_user, authenticate_user, get_current_active_user, create_verification_token, verify_email_token
 from fastapi.security import OAuth2PasswordRequestForm
-from datetime import timedelta
+from datetime import timedelta, timezone
 from typing import Annotated
 from pydantic import Field
 from emails import verify_mail_template
@@ -66,12 +66,15 @@ class NewHajRequest(BaseModel):
   mloftearsabsorbed: float | None = None
 
 class VerifyRequest(BaseModel):
-    token: str
+  token: str
 
 class RegisterRequest(BaseModel):
   username: Annotated[str, Field(min_length=3, max_length=96, pattern=r'^[a-zA-Z0-9_-]+$')]
   email: EmailStr
   password: Annotated[str, Field(min_length=16)]
+
+class NewTokenRequest(BaseModel):
+  email: EmailStr
 
 class NfcRequest(BaseModel):
   picc_data: str
@@ -215,14 +218,41 @@ async def register(req: RegisterRequest):
       raise HTTPException(status_code=400, detail=str(res.get('error', 'An error occured while sending you an email, please try again later.')))
   return {"status": "ok"}
 
+@api.post('/auth/new_verification_token')
+async def new_verif_token(req: NewTokenRequest ):
+  human = await Humans.objects().get(Humans.email == req.email)
+  if human is not None and not human.verified:
+    try:
+      jwt = create_verification_token(req.email)
+      await mail.send_message(MessageSchema(
+        recipients = [NameEmail(name=human.username, email=req.email)],
+        subject = "Verify your Hajdentity account",
+        body = verify_mail_template(human.username, f"{settings.base_url}register/verify?token={jwt}"),
+        subtype = MessageType.html
+      ))
+    except Exception:
+      raise HTTPException(status_code=400, detail="An error occured while sending you an email, please try again later.")
+  return {"status": "ok"}
+
 @api.post('/auth/verify')
 async def verify(req: VerifyRequest):
-  email = verify_email_token(req.token)
-  if email is not None:
-      await Humans.update({Humans.verified: True}).where(Humans.email == email)
+  payload = verify_email_token(req.token)
+  if payload is None:
+    raise HTTPException(status_code=400, detail="Invalid token")
+
+  human = await Humans.objects().get(Humans.email == payload.email)
+  expiration: int | None = int(payload.exp)
+  print(datetime.datetime.fromtimestamp(expiration, timezone.utc))
+  print(datetime.datetime.now(timezone.utc))
+  if human is not None and human.verified:
+    return {"status": "ok", "email": payload.email}
+  if expiration is None or datetime.datetime.fromtimestamp(expiration, timezone.utc) < datetime.datetime.now(timezone.utc):
+    raise HTTPException(status_code=403, detail="Token expired")
+  elif human is not None:
+    await Humans.update({Humans.verified: True}).where(Humans.email == payload.email)
+    return {"status": "ok", "email": payload.email}
   else:
-      raise HTTPException(status_code=400, detail="Invalid token, it probably expired")
-  return {"status": "ok"}
+    raise HTTPException(status_code=404, detail="This account does not exist")
 
 @api.post('/auth/token')
 async def token(form_data: OAuth2PasswordRequestForm = Depends()):

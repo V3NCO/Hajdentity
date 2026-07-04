@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     key3: Key3 # Key 3 is used to encode and decode the URL
     secret_key: Annotated[str, Field(min_length=128, max_length=128)]  # Secret key for encryption of user passwords in database
     access_token_expire_minutes: int = 30 # Minutes until user sessions expires
+    verification_token_expire_minutes: int = 1440 # Minutes until verification token expires
     algorithm: str = "HS256" # encryption algorithm of user passwords in database
     mail: MailSettings = MailSettings()
     db: DatabaseSettings = DatabaseSettings()

@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 import uuid
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -16,6 +17,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
+
+class VerifPayload(BaseModel):
+  email: str
+  exp: str
 
 class Token(BaseModel):
   access_token: str
@@ -130,17 +135,14 @@ def create_verification_token(email: str) -> str:
   return jwt.encode({
     "sub": email,
     "type": "verify",
-    "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+    "exp": datetime.now(timezone.utc) + timedelta(minutes=settings.verification_token_expire_minutes)
   }, SECRET_KEY, algorithm=ALGORITHM)
 
-def verify_email_token(token: str) -> str | None:
+def verify_email_token(token: str) -> VerifPayload | None:
   try:
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     if payload.get("type") != "verify":
       return None
-    expiration: datetime | None = payload.get("exp")
-    if expiration is None or expiration < datetime.now(timezone.utc):
-        return None
-    return payload.get("sub")
+    return VerifPayload(email=str(payload.get("sub")), exp=str(payload.get("exp")))
   except jwt.PyJWTError:
     return None

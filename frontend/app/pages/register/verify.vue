@@ -3,22 +3,38 @@ import { ref } from 'vue'
 
 const route = useRoute()
 const { token, sent } = route.query
-const hasToken = ref(false)
+const email = ref('')
 const isSent = ref(false)
+const isExpired = ref(false)
+const isVerified = ref(false)
 
 if (token) {
-  hasToken.value = true
   const { data, error } = await useFetch('/api/auth/verify', {
     method: 'POST',
     body: {
       token: token,
     }
   })
+  console.log(data.value)
 
+  console.log(error.value?.status)
+
+  if (error.value) {
+    if (error.value?.status === 403) { isExpired.value = true; }
+  } else {
+    isVerified.value = true;
+    email.value = data.value?.email ?? ''
+  }
 }
 
 if (sent) {
   isSent.value = true
+}
+
+
+async function onSubmit() {
+  await $fetch("/api/auth/new_verification_token", { method: 'POST', body: { email: email.value } })
+  alert("An email has been sent if the email is registered and unverified. Please check your inbox and spam.")
 }
 
 useSeoMeta({
@@ -38,6 +54,29 @@ useHead({ htmlAttrs: { lang: 'en' } })
       <p>We've sent a mail to your inbox, if you don't see it; make sure to check your spam folder.</p>
       <a href="/register/verify">Resend an email</a>
     </div>
+    <div v-else-if="isExpired">
+      <h1>This token is Expired!</h1>
+      <Icon class="bigicon" name="material-symbols:hourglass-disabled-outline"/>
+      <p>You have opened the link too late, please try resending an email with the link below!</p>
+      <a href="/register/verify">Resend an email</a>
+    </div>
+    <div v-else-if="isVerified">
+      <h1>Email Verified!</h1>
+      <Icon class="bigicon" name="material-symbols:verified-outline"/>
+      <p>Your email {{ email }} is verified, you can now login to your account!</p>
+    </div>
+    <form v-else ref="ResendVerifEmailForm" @submit.prevent="onSubmit" >
+      <h1>Resend a verification email</h1>
+      <input
+        v-model="email"
+        id="email"
+        name="email"
+        type="email"
+        placeholder="Email address"
+        required
+      />
+      <button type="submit">Submit</button>
+    </form>
   </div>
 </div>
 </template>
