@@ -1,34 +1,42 @@
 import asyncio
-from typing import Any
+import hashlib
+import secrets
 import uuid
 import jwt
 from datetime import datetime, timedelta, timezone
+from typing import Literal, TypedDict
 from pwdlib import PasswordHash
 from pydantic import UUID4, BaseModel
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from home.tables import Humans
+from fastapi import Depends, HTTPException, Request, Response
+from home.tables import Humans, Sessions
 from config import settings
 
 password_hash = PasswordHash.recommended()
 SECRET_KEY = settings.secret_key
 ALGORITHM = settings.algorithm
-ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+class CookieKwargs(TypedDict):
+  httponly: bool
+  secure: bool
+  samesite: Literal["lax", "strict", "none"]
+  path: str
+  domain: str | None
+
+DOMAIN = settings.cookie_domain
+
+def _cookie_kwargs() -> CookieKwargs:
+  return {
+    "httponly": True,
+    "secure": settings.cookie_secure,
+    "samesite": "strict",
+    "path": "/api",
+    "domain": DOMAIN,
+  }
 
 
 class VerifPayload(BaseModel):
   email: str | None
   exp: bool
-
-class Token(BaseModel):
-  access_token: str
-  token_type: str
-
-
-class TokenData(BaseModel):
-  username: str | None = None
 
 
 class User(BaseModel):
@@ -51,13 +59,75 @@ def get_password_hash(password):
   return password_hash.hash(password)
 
 
+def _create_session_id() -> str:
+  return hashlib.sha256(secrets.token_bytes(64)).hexdigest()
+
+
+async def create_session(user_id: str, request: Request) -> str:
+  session_id = _create_session_id()
+  now = datetime.now(timezone.utc)
+  await Sessions.insert(Sessions(
+    id=uuid.uuid4(),
+    user_id=user_id,
+    session_id=session_id,
+    created_at=now,
+    last_seen_at=now,
+    user_agent=request.headers.get("user-agent"),
+    ip_address=request.client.host if request.client else None,
+  ))
+  return session_id
+
+
+def set_session_cookie(response: Response, session_id: str):
+  max_age = settings.session_absolute_days * 86400
+  response.set_cookie(
+    "session", session_id,
+    max_age=max_age, **_cookie_kwargs()
+  )
+
+
+def clear_session_cookie(response: Response):
+  response.delete_cookie("session", **_cookie_kwargs())
+
+
+async def delete_session(session_id: str):
+  await Sessions.delete().where(Sessions.session_id == session_id)
+
+
+async def touch_session(session_id: str):
+  now = datetime.now(timezone.utc)
+  await Sessions.update({Sessions.last_seen_at: now}).where(
+    Sessions.session_id == session_id
+  )
+
+
+async def validate_session(session_id: str) -> UserInDB | None:
+    session_row = await Sessions.select().where(Sessions.session_id == session_id).first()
+    if not session_row:
+      return None
+
+    now = datetime.now(timezone.utc)
+    idle_cutoff = now - timedelta(minutes=settings.session_idle_minutes)
+    absolute_cutoff = now - timedelta(days=settings.session_absolute_days)
+
+    if session_row["last_seen_at"] < idle_cutoff or session_row["created_at"] < absolute_cutoff:
+      await Sessions.delete().where(Sessions.id == session_row["id"])
+      return None
+
+    user_dict = await Humans.select().where(Humans.id == session_row["user_id"]).first()
+    if not user_dict:
+      return None
+
+    await touch_session(session_id)
+    return UserInDB(**user_dict)
+
 async def get_user(username: str | None):
   if username is None:
     return None
-  is_in_db = await Humans.exists().where(Humans.username == username)
-  if is_in_db:
-    user_dict = await Humans.select().where(Humans.username == username)
-    return UserInDB(**user_dict[0])
+  user_dict = await Humans.select().where(Humans.username == username).first()
+  if user_dict:
+    return UserInDB(**user_dict)
+  return None
 
 
 async def authenticate_user(username: str, password: str):
@@ -68,17 +138,6 @@ async def authenticate_user(username: str, password: str):
   if not verified:
     return False
   return user
-
-
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-  to_encode = data.copy()
-  if expires_delta:
-    expire = datetime.now(timezone.utc) + expires_delta
-  else:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-  to_encode.update({"exp": expire})
-  encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-  return encoded_jwt
 
 
 async def create_user(form_data):
@@ -100,35 +159,27 @@ async def create_user(form_data):
       hashed_password=pwd
     ))
     return {"ok": True}
-  except Exception as error:
-    return {"ok": False, "error": str(error)}
+  except Exception:
+    return {"ok": False, "error": "An internal error occurred. Please try again."}
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-  credentials_exception = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Could not validate credentials",
-    headers={"WWW-Authenticate": "Bearer"},
-  )
-  try:
-    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    username: str | None = payload.get("sub")
-    if username is None:
-      raise credentials_exception
-    token_data = TokenData(username=username)
-  except jwt.PyJWTError:
-    raise credentials_exception
-  user = await get_user(token_data.username)
-  if user is None:
-    raise credentials_exception
+async def get_current_user(request: Request):
+  session_id = request.cookies.get("session")
+  if not session_id:
+    raise HTTPException(status_code=401, detail="Not authenticated")
+
+  user = await validate_session(session_id)
+  if not user:
+    clear_session_cookie(Response())
+    raise HTTPException(status_code=401, detail="Session expired")
   return user
 
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
   if current_user.disabled:
-    raise HTTPException(status_code=400, detail="Inactive user")
+    raise HTTPException(status_code=403, detail="Inactive user")
   if not current_user.verified:
-    raise HTTPException(status_code=400, detail="User not verified")
+    raise HTTPException(status_code=403, detail="User not verified")
   return current_user
 
 def create_verification_token(email: str) -> str:
@@ -142,7 +193,6 @@ def verify_email_token(token: str) -> VerifPayload | None:
   try:
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     if payload.get("type") != "verify":
-      print(f"type isnt verify, its {payload.get('type')}")
       return None
     return VerifPayload(email=str(payload.get("sub")), exp=False)
   except jwt.ExpiredSignatureError:

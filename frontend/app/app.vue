@@ -13,6 +13,8 @@ body {
   overflow: hidden;
   background-image: url("/stocksharks.jpeg");
   font-family: "Noto Sans";
+  background-repeat: no-repeat;
+  background-size: cover;
   /* Eventually this would be an animated carousel of shark images from users */
   /* Maybe scrolling cards, because simple images side by side would look wrong and blending them with gradients would look wrong too */
 }

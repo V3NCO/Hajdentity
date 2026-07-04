@@ -12,6 +12,8 @@ useSeoMeta({
   twitterCard: 'summary'
 })
 
+definePageMeta({ middleware: 'guest' })
+
 useHead({ htmlAttrs: { lang: 'en' } })
 
 const registerForm = ref<HTMLFormElement | null>(null)

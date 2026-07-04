@@ -53,3 +53,12 @@ class Humans(Table):
   hashed_password = Varchar(length=512, null=True)
   verified = Boolean(default=False)
   disabled = Boolean(default=False)
+
+class Sessions(Table):
+  id = UUID(primary_key=True, null=False)
+  user_id = UUID(null=False)
+  session_id = Varchar(length=64, unique=True, null=False, index=True)
+  created_at = Timestamptz(null=False)
+  last_seen_at = Timestamptz(null=False)
+  user_agent = Text(null=True)
+  ip_address = Varchar(length=45, null=True)

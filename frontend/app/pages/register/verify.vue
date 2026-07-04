@@ -10,7 +10,7 @@ const isInvalid = ref(false)
 const isVerified = ref(false)
 
 if (token) {
-  const { data, error } = await useFetch('/api/auth/verify', {
+  const { data, error } = await useFetch<{ status: string; email: string }>('/api/auth/verify', {
     method: 'POST',
     body: {
       token: token,

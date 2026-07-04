@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 import datetime
-from home.tables import Humans
-from fastapi import FastAPI, HTTPException, APIRouter, Depends
+from home.tables import Humans, HajInfo, NFCTable
+from fastapi import FastAPI, HTTPException, APIRouter, Depends, Request, Response
 from fastapi_mail import MessageSchema, MessageType
 from piccolo.engine import engine_finder
 import uuid
@@ -11,10 +11,13 @@ from Crypto.Hash import CMAC
 from helpers import diversify_key
 from config import settings, mail
 import secrets
-from home.tables import HajInfo, NFCTable
-from auth import create_access_token, create_user, authenticate_user, get_current_active_user, create_verification_token, verify_email_token
+from urllib.parse import urlparse
+from auth import (
+  create_user, authenticate_user, get_current_active_user,
+  create_verification_token, verify_email_token,
+  create_session, delete_session, set_session_cookie, clear_session_cookie,
+)
 from fastapi.security import OAuth2PasswordRequestForm
-from datetime import timedelta, timezone
 from typing import Annotated
 from pydantic import Field
 from emails import verify_mail_template
@@ -52,6 +55,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 api = APIRouter(prefix="/api")
 
+
 class NewHajRequest(BaseModel):
   name: Annotated[str, Field(max_length=48, )]
   date: datetime.date
@@ -80,9 +84,31 @@ class NfcRequest(BaseModel):
   picc_data: str
   cmac: str
 
+
 class ProvisionRequest(BaseModel):
   tag_id: Annotated[str, Field(min_length=14, max_length=14, pattern=r'^[0-9a-fA-F]{14}$')]
   haj_id: UUID4
+
+
+@app.middleware("http")
+async def check_origin(request: Request, call_next):
+  if request.method in ("GET", "HEAD", "OPTIONS"):
+    return await call_next(request)
+
+  origin = request.headers.get("origin")
+
+  if origin:
+    parsed = urlparse(origin)
+    expected = urlparse(str(settings.base_url))
+    if parsed.hostname != expected.hostname:
+      return Response(
+        content='{"detail":"Invalid origin"}',
+        status_code=403,
+        media_type="application/json",
+      )
+
+  return await call_next(request)
+
 
 @api.get("/")
 async def test():
@@ -179,26 +205,10 @@ async def add_haj(req: NewHajRequest, current_user = Depends(get_current_active_
       lastwashed = req.lastwashed,
       mloftearsabsorbed= req.mloftearsabsorbed
     ).save()
-    return {
-      "status": "OK",
-      "inserted": {
-        "uuid": haj_id,
-        "human": current_user.id,
-        "name": req.name,
-        "date": req.date,
-        "size": req.size,
-        "location": req.location,
-        "description": req.description,
-        "pronouns": req.pronouns,
-        "gender": req.gender,
-        "floof": req.floof,
-        "squish": req.squish,
-        "lastwashed": req.lastwashed,
-        "mloftearsabsorbed": req.mloftearsabsorbed
-      }
-    }
-  except Exception as e:
-    raise HTTPException(500, f"An internal error occured, please try again or contact the administrator with {e}")
+    return {"status": "ok", "uuid": str(haj_id)}
+  except Exception:
+    raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
+
 
 @api.post('/auth/register')
 async def register(req: RegisterRequest):
@@ -215,7 +225,7 @@ async def register(req: RegisterRequest):
     ))
   except Exception:
       await Humans.delete().where(Humans.email == req.email)
-      raise HTTPException(status_code=400, detail=str(res.get('error', 'An error occured while sending you an email, please try again later.')))
+      raise HTTPException(status_code=500, detail=str(res.get('error', 'An error occured while sending you an email, please try again later.')))
   return {"status": "ok"}
 
 @api.post('/auth/new_verification_token')
@@ -231,7 +241,7 @@ async def new_verif_token(req: NewTokenRequest ):
         subtype = MessageType.html
       ))
     except Exception:
-      raise HTTPException(status_code=400, detail="An error occured while sending you an email, please try again later.")
+      raise HTTPException(status_code=500, detail="An error occured while sending you an email, please try again later.")
   return {"status": "ok"}
 
 @api.post('/auth/verify')
@@ -245,19 +255,32 @@ async def verify(req: VerifyRequest):
     return {"status": "ok", "email": payload.email}
   if payload.exp:
     raise HTTPException(status_code=403, detail="Token expired")
-  elif human is not None:
+  if human is not None:
     await Humans.update({Humans.verified: True}).where(Humans.email == payload.email)
     return {"status": "ok", "email": payload.email}
-  else:
-    raise HTTPException(status_code=404, detail="This account does not exist")
+  raise HTTPException(status_code=404, detail="This account does not exist")
 
 @api.post('/auth/token')
-async def token(form_data: OAuth2PasswordRequestForm = Depends()):
+async def token(response: Response, request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
   user = await authenticate_user(form_data.username, form_data.password)
   if not user:
     raise HTTPException(status_code=401, detail="Incorrect username or password")
-  access_token = create_access_token({"sub": user.username}, expires_delta=timedelta(minutes=settings.access_token_expire_minutes))
-  return {"access_token": access_token, "token_type": "bearer"}
+  if not user.verified:
+    raise HTTPException(status_code=403, detail="Email not verified. Please check your inbox.")
+
+  session_id = await create_session(str(user.id), request)
+  set_session_cookie(response, session_id)
+
+  return {"username": user.username, "disabled": user.disabled}
+
+
+@api.post('/auth/logout')
+async def logout(request: Request, response: Response):
+  session_id = request.cookies.get("session")
+  if session_id:
+    await delete_session(session_id)
+  clear_session_cookie(response)
+  return {"status": "ok"}
 
 
 @api.get('/auth/me')
