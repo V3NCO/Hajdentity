@@ -9,6 +9,7 @@ result
 .meili
 .sharkey
 .redis
+.garage
 
 compose.yaml
 pg

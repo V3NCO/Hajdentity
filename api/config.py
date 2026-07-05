@@ -2,6 +2,7 @@ from pydantic import AfterValidator, EmailStr, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Annotated
 from fastapi_mail import FastMail, ConnectionConfig
+import minio
 
 def hex_to_bytes(v: str | bytes) -> bytes:
     if isinstance(v, bytes):
@@ -50,6 +51,14 @@ class DatabaseSettings(BaseSettings):
     host: str = "localhost"
     port: int = 5432
 
+class S3Settings(BaseSettings):
+    endpoint: str = "http://localhost:3900"
+    access_key: str = ""
+    secret_key: str = ""
+    bucket: str = "hajdentity"
+    secure: bool = True
+    region: str = "garage"
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix='HAJDENTITY_',  env_nested_delimiter='__')
     master_key: MasterKey # 16 bytes AES 128 master key
@@ -66,6 +75,7 @@ class Settings(BaseSettings):
     cookie_domain: str | None = None # Optional cookie domain
     mail: MailSettings = MailSettings()
     db: DatabaseSettings = DatabaseSettings()
+    s3: S3Settings = S3Settings()
 
 settings = Settings()  # type: ignore[reportCallIssue]
 
@@ -86,3 +96,11 @@ mail_config = ConnectionConfig(
 
 
 mail = FastMail(config=mail_config)
+
+s3 = minio.Minio(
+  endpoint=settings.s3.endpoint,
+  access_key=settings.s3.access_key,
+  secret_key=settings.s3.secret_key,
+  secure=settings.s3.secure,
+  region=settings.s3.region,
+)
