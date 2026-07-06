@@ -292,7 +292,15 @@ async def list_hajs(
   ).where(HajInfo.human == current_user.id)
   return {"status": "ok", "hajs": hajs}
 
-@api.get('/haj/image/{haj_id}')
+@api.get('/haj/info/{haj_id}', response_model=HajListResponse)
+async def haj_info(haj_id: UUID4, current_user = Depends(get_optional_user)):
+  user_id = current_user.id if current_user else None
+  if await check_haj_perm(user_id, haj_id):
+    haj = await HajInfo.select().where(HajInfo.uuid == haj_id).first()
+    return {"status": "ok", "haj": haj}
+  raise HTTPException(status_code=403, detail="Not authorized")
+
+@api.get('/haj/image/{haj_id}', tags=["Haj"])
 async def get_haj_image(haj_id: UUID4, current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   if await check_haj_perm(user_id, haj_id):
