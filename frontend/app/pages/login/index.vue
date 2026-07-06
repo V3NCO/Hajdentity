@@ -13,10 +13,8 @@ useSeoMeta({
 })
 
 definePageMeta({ middleware: 'guest' })
-
-useHead({ htmlAttrs: { lang: 'en' } })
-import '~/assets/css/auth.css'
-
+import authCss from '~/assets/css/auth.css?raw'
+useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: authCss }] })
 const route = useRoute()
 const auth = useAuth()
 

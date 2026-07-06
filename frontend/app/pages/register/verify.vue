@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import '~/assets/css/auth.css'
-
+import authCss from '~/assets/css/auth.css?raw'
+useHead({ style: [{ textContent: authCss }] })
 const route = useRoute()
 const { token, sent } = route.query
 const email = ref('')

@@ -13,9 +13,8 @@ useSeoMeta({
 })
 
 definePageMeta({ middleware: 'guest' })
-
-useHead({ htmlAttrs: { lang: 'en' } })
-import '~/assets/css/auth.css'
+import authCss from '~/assets/css/auth.css?raw'
+useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: authCss }] })
 
 const registerForm = ref<HTMLFormElement | null>(null)
 const username = ref('')
@@ -121,3 +120,7 @@ async function onSubmit() {
   </div>
 </div>
 </template>
+
+<style scoped>
+@import url('~/assets/css/auth.css');
+</style>

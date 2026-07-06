@@ -51,7 +51,7 @@ onMounted(async () => {
   </div>
 </template>
 
-<style>
+<style scoped>
 .cards {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -69,6 +69,14 @@ onMounted(async () => {
   background-position: center;
   border-radius: 2em;
   overflow: hidden;
+  outline: 0px solid #DDD;
+  transition: all .3s ease;
+}
+
+.card:hover {
+  outline-width: 3px;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px #FFFFFF66;
 }
 
 .gradient {
@@ -100,9 +108,14 @@ onMounted(async () => {
 
 .new {
   color: dimgray;
-  border: 2px dashed gray;
+  border: 2px dashed gray !important;
   display: grid;
   justify-items: center;
+}
+
+.new:hover {
+  outline-width: 0px;
+  box-shadow: 0 8px 15px #FFFFFF33;
 }
 
 .new p {
@@ -113,10 +126,5 @@ onMounted(async () => {
 .plus {
   font-size: 3rem;
   align-self: flex-end;
-}
-
-html, body {
-  height: 100%;
-  margin: 0;
 }
 </style>
