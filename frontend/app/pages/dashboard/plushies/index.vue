@@ -24,30 +24,28 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div>
-    <div v-if="error && !loading">Error: {{ error }}</div>
-    <div v-else class="cards">
-      <a href="/dashboard/plushies/new" class="card new">
-        <Icon name="material-symbols:add" class="plus" />
-        <p>Add plushie</p>
-      </a>
-      <a
-        :style="{ backgroundImage: `url(/api/haj/image/${plush.uuid})` }"
-        v-for="plush in data?.hajs"
-        :key="plush.uuid"
-        class="card"
-        :href="`/dashboard/plushies/${plush.uuid}`"
-      >
-        <div class="gradient">
-          <h1>{{ plush.name }}</h1>
-          <span>
-            <Icon v-if="plush.public" name="material-symbols:public" title="Public"/>
-            <Icon v-else name="material-symbols:lock" title="Private"/>
-            <p>{{ plush.pronouns }}</p>
-          </span>
-        </div>
-      </a>
-    </div>
+  <div v-if="error && !loading">Error: {{ error }}</div>
+  <div v-else class="cards">
+    <a href="/dashboard/plushies/new" class="card new">
+      <Icon name="material-symbols:add" class="plus" />
+      <p>Add plushie</p>
+    </a>
+    <a
+      :style="{ backgroundImage: `url(/api/haj/image/${plush.uuid})` }"
+      v-for="plush in data?.hajs"
+      :key="plush.uuid"
+      class="card"
+      :href="`/dashboard/plushies/${plush.uuid}`"
+    >
+      <div class="gradient">
+        <h1>{{ plush.name }}</h1>
+        <span>
+          <Icon v-if="plush.public" name="material-symbols:public" title="Public"/>
+          <Icon v-else name="material-symbols:lock" title="Private"/>
+          <p>{{ plush.pronouns }}</p>
+        </span>
+      </div>
+    </a>
   </div>
 </template>
 
