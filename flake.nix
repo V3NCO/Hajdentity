@@ -115,6 +115,7 @@
                 pwdlib
                 python-multipart
                 minio
+                pillow
 
                 (buildPythonPackage rec {
                   pname = "piccolo-api";
@@ -221,7 +222,7 @@
                   echo $! > "$MEILI_DATA/pid"
                   echo "starting garage"
 
-                  garage server --single-node --default-bucket > "$GARAGE_DATA/logfile" 2>&1 &
+                  garage server > "$GARAGE_DATA/logfile" 2>&1 &
                   echo $! > "$GARAGE_DATA/pid"
                   sleep 1
 

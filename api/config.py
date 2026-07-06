@@ -52,7 +52,7 @@ class DatabaseSettings(BaseSettings):
     port: int = 5432
 
 class S3Settings(BaseSettings):
-    endpoint: str = "http://localhost:3900"
+    endpoint: str = "localhost:3900"
     access_key: str = ""
     secret_key: str = ""
     bucket: str = "hajdentity"
@@ -73,6 +73,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256" # encryption algorithm of user passwords in database
     cookie_secure: bool = True # Set Secure flag on session cookie
     cookie_domain: str | None = None # Optional cookie domain
+    max_image_size: int = 10 # Max image size in MB
     mail: MailSettings = MailSettings()
     db: DatabaseSettings = DatabaseSettings()
     s3: S3Settings = S3Settings()

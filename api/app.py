@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 import datetime
 from home.tables import Humans, HajInfo, NFCTable
-from fastapi import FastAPI, HTTPException, APIRouter, Depends, Request, Response
+from fastapi import FastAPI, HTTPException, APIRouter, Depends, Form, Request, Response, UploadFile, File
 from fastapi_mail import MessageSchema, MessageType
 from piccolo.engine import engine_finder
 import uuid
@@ -9,7 +9,9 @@ from pydantic import UUID4, BaseModel, EmailStr, NameEmail
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from helpers import diversify_key
-from config import settings, mail
+from config import settings, mail, s3
+from PIL import Image
+from io import BytesIO
 import secrets
 from urllib.parse import urlparse
 from auth import (
@@ -68,6 +70,26 @@ class NewHajRequest(BaseModel):
   squish: Annotated[int, Field(ge=1, le=10)] | None = None
   lastwashed: datetime.datetime | None = None
   mloftearsabsorbed: float | None = None
+
+def haj_from_form(
+  name: Annotated[str, Form(max_length=48)],
+  date: Annotated[datetime.date, Form()],
+  size: Annotated[float, Form()],
+  description: Annotated[str, Form()],
+  location: Annotated[str | None, Form()] = None,
+  pronouns: Annotated[str | None, Form(max_length=32)] = None,
+  gender: Annotated[str | None, Form(max_length=96)] = None,
+  floof: Annotated[int | None, Form(ge=1, le=10)] = None,
+  squish: Annotated[int | None, Form(ge=1, le=10)] = None,
+  lastwashed: Annotated[datetime.datetime | None, Form()] = None,
+  mloftearsabsorbed: Annotated[float | None, Form()] = None,
+) -> NewHajRequest:
+  return NewHajRequest(
+    name=name, date=date, size=size, location=location,
+    description=description, pronouns=pronouns, gender=gender,
+    floof=floof, squish=squish, lastwashed=lastwashed,
+    mloftearsabsorbed=mloftearsabsorbed,
+  )
 
 class VerifyRequest(BaseModel):
   token: str
@@ -187,7 +209,11 @@ async def provision(req: ProvisionRequest, current_user = Depends(get_current_ac
 
 
 @api.post('/haj/create')
-async def add_haj(req: NewHajRequest, current_user = Depends(get_current_active_user)):
+async def add_haj(
+  req: NewHajRequest = Depends(haj_from_form),
+  image: UploadFile = File(...),
+  current_user = Depends(get_current_active_user)
+):
   try:
     haj_id = uuid.uuid4()
     await HajInfo(
@@ -205,9 +231,32 @@ async def add_haj(req: NewHajRequest, current_user = Depends(get_current_active_
       lastwashed = req.lastwashed,
       mloftearsabsorbed= req.mloftearsabsorbed
     ).save()
+    try:
+      img = Image.open(image.file)
+      img.verify()
+      image.file.seek(0)
+      ext = img.format.lower()
+      if ext not in ("jpeg", "png", "gif", "webp"):
+        raise HTTPException(status_code=400, detail="Unsupported image format")
+    except Exception:
+      raise HTTPException(status_code=400, detail="Invalid or corrupted image")
+
+    contents = await image.read()
+    size = len(contents)
+    if size > settings.max_image_size * 1024 * 1024:
+      raise HTTPException(status_code=400, detail="Image too large")
+
+    s3.put_object(
+      bucket_name=settings.s3.bucket,
+      object_name=f"hajs/{haj_id}",
+      data=BytesIO(contents),
+      length=size,
+      content_type=f"image/{ext}",
+    )
+
     return {"status": "ok", "uuid": str(haj_id)}
-  except Exception:
-    raise HTTPException(status_code=500, detail="An internal error occurred. Please try again.")
+  except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))
 
 
 @api.post('/auth/register')
