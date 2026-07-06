@@ -7,6 +7,7 @@ export function useApi() {
   if (!_api) {
     _api = createClient<paths>({
       baseUrl: useRuntimeConfig().public.apiBase,
+      fetch: globalThis.fetch,
       credentials: "include",
     });
   }

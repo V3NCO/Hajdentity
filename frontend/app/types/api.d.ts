@@ -271,6 +271,16 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        HajListItem: {
+            uuid: string;
+            name: string;
+            pronouns?: string | null;
+            public: boolean;
+        };
+        HajListResponse: {
+            status: string;
+            hajs: components["schemas"]["HajListItem"][];
+        };
         /** NewTokenRequest */
         NewTokenRequest: {
             /**
@@ -471,7 +481,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HajListResponse"];
                 };
             };
         };

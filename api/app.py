@@ -60,6 +60,17 @@ app = FastAPI(lifespan=lifespan)
 api = APIRouter(prefix="/api")
 
 
+class HajListItem(BaseModel):
+  uuid: UUID4
+  name: str
+  pronouns: str | None = None
+  public: bool = True
+
+class HajListResponse(BaseModel):
+  status: str
+  hajs: list[HajListItem]
+
+
 class NewHajRequest(BaseModel):
   name: Annotated[str, Field(max_length=48, )]
   date: datetime.date
@@ -269,7 +280,7 @@ async def add_haj(
   except Exception as e:
     raise HTTPException(status_code=500, detail=str(e))
 
-@api.get('/haj/list')
+@api.get('/haj/list', response_model=HajListResponse)
 async def list_hajs(
   current_user = Depends(get_current_active_user)
 ):
