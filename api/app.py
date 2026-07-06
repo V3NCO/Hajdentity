@@ -262,8 +262,20 @@ async def add_haj(
   except Exception as e:
     raise HTTPException(status_code=500, detail=str(e))
 
+@api.get('/haj/list')
+async def list_hajs(
+  current_user = Depends(get_current_active_user)
+):
+  hajs = await HajInfo.select(
+    HajInfo.uuid,
+    HajInfo.pronouns,
+    HajInfo.name,
+    HajInfo.public,
+  ).where(HajInfo.human == current_user.id)
+  return {"status": "ok", "hajs": hajs}
+
 @api.get('/haj/image/{haj_id}')
-async def get_haj_id(haj_id: UUID4, current_user = Depends(get_optional_user)):
+async def get_haj_image(haj_id: UUID4, current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   if await check_haj_perm(user_id, haj_id):
     try:
