@@ -21,6 +21,7 @@ from auth import (
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import StreamingResponse
+from scalar_fastapi import get_scalar_api_reference
 from typing import Annotated
 from pydantic import Field
 from emails import verify_mail_template
@@ -138,6 +139,12 @@ async def check_origin(request: Request, call_next):
 @api.get("/")
 async def test():
   return "API is UP!"
+
+@app.get("/scalar", include_in_schema=False)
+async def scalar_html():
+  return get_scalar_api_reference(
+      openapi_url=app.openapi_url,
+  )
 
 @api.post("/nfc/auth")
 async def nfc_auth(tap: NfcRequest):

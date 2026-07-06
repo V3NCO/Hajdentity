@@ -110,6 +110,7 @@
                 starlette
                 fastapi
                 fastapi-mail
+                (scalar-fastapi.overridePythonAttrs { doCheck = false; })
                 pycryptodome
                 pyjwt
                 pwdlib
