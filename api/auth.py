@@ -8,7 +8,7 @@ from typing import Literal, TypedDict
 from pwdlib import PasswordHash
 from pydantic import UUID4, BaseModel
 from fastapi import Depends, HTTPException, Request, Response
-from home.tables import Humans, Sessions
+from home.tables import HajInfo, Humans, Sessions
 from config import settings
 
 password_hash = PasswordHash.recommended()
@@ -199,3 +199,13 @@ def verify_email_token(token: str) -> VerifPayload | None:
     return VerifPayload(email=None, exp=True)
   except jwt.PyJWTError:
     return None
+
+async def check_haj_perm(user_id: UUID4, haj_id: UUID4):
+  haj = await HajInfo.objects().get(HajInfo.uuid == haj_id)
+  if not haj:
+    return False
+  if not haj.public:
+    if haj.human == user_id:
+      return True
+    return False
+  return True

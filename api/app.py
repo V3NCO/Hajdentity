@@ -15,11 +15,12 @@ from io import BytesIO
 import secrets
 from urllib.parse import urlparse
 from auth import (
-  create_user, authenticate_user, get_current_active_user,
+  check_haj_perm, create_user, authenticate_user, get_current_active_user,
   create_verification_token, verify_email_token,
   create_session, delete_session, set_session_cookie, clear_session_cookie,
 )
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.responses import StreamingResponse
 from typing import Annotated
 from pydantic import Field
 from emails import verify_mail_template
@@ -70,6 +71,7 @@ class NewHajRequest(BaseModel):
   squish: Annotated[int, Field(ge=1, le=10)] | None = None
   lastwashed: datetime.datetime | None = None
   mloftearsabsorbed: float | None = None
+  public: bool = True
 
 def haj_from_form(
   name: Annotated[str, Form(max_length=48)],
@@ -83,12 +85,13 @@ def haj_from_form(
   squish: Annotated[int | None, Form(ge=1, le=10)] = None,
   lastwashed: Annotated[datetime.datetime | None, Form()] = None,
   mloftearsabsorbed: Annotated[float | None, Form()] = None,
+  public: bool = True
 ) -> NewHajRequest:
   return NewHajRequest(
     name=name, date=date, size=size, location=location,
     description=description, pronouns=pronouns, gender=gender,
     floof=floof, squish=squish, lastwashed=lastwashed,
-    mloftearsabsorbed=mloftearsabsorbed,
+    mloftearsabsorbed=mloftearsabsorbed, public=public
   )
 
 class VerifyRequest(BaseModel):
@@ -229,13 +232,14 @@ async def add_haj(
       floof = req.floof,
       squish = req.squish,
       lastwashed = req.lastwashed,
-      mloftearsabsorbed= req.mloftearsabsorbed
+      mloftearsabsorbed= req.mloftearsabsorbed,
+      public=req.public
     ).save()
     try:
       img = Image.open(image.file)
       img.verify()
       image.file.seek(0)
-      ext = img.format.lower()
+      ext = img.format.lower() if img.format is not None else None
       if ext not in ("jpeg", "png", "gif", "webp"):
         raise HTTPException(status_code=400, detail="Unsupported image format")
     except Exception:
@@ -257,6 +261,19 @@ async def add_haj(
     return {"status": "ok", "uuid": str(haj_id)}
   except Exception as e:
     raise HTTPException(status_code=500, detail=str(e))
+
+@api.get('/haj/image/{haj_id}')
+async def get_haj_id(haj_id: UUID4, current_user = Depends(get_current_active_user)):
+  if check_haj_perm(current_user.id, haj_id):
+    try:
+      obj = s3.get_object(settings.s3.bucket, f"hajs/{haj_id}")
+      return StreamingResponse(
+        obj.stream(),
+        media_type=obj.headers.get("Content-Type", "image/jpeg"),
+        headers={"Cache-Control": "public, max-age=86400"}
+      )
+    except Exception:
+      raise HTTPException(status_code=404, detail="Image not found")
 
 
 @api.post('/auth/register')
