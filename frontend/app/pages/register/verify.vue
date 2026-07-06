@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import '~/assets/css/auth.css'
 
 const route = useRoute()
 const { token, sent } = route.query

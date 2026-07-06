@@ -15,6 +15,7 @@ useSeoMeta({
 definePageMeta({ middleware: 'guest' })
 
 useHead({ htmlAttrs: { lang: 'en' } })
+import '~/assets/css/auth.css'
 
 const registerForm = ref<HTMLFormElement | null>(null)
 const username = ref('')
