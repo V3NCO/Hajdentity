@@ -147,7 +147,7 @@ async def check_origin(request: Request, call_next):
   return await call_next(request)
 
 
-@api.get("/")
+@api.get("/", tags=["General"])
 async def test():
   return "API is UP!"
 
@@ -157,7 +157,7 @@ async def scalar_html():
       openapi_url=app.openapi_url,
   )
 
-@api.post("/nfc/auth")
+@api.post("/nfc/auth", tags=["NFC"])
 async def nfc_auth(tap: NfcRequest):
   picc_bytes = bytes.fromhex(tap.picc_data)
   iv = b'\x00' * 16
@@ -194,7 +194,7 @@ async def nfc_auth(tap: NfcRequest):
       raise HTTPException(status_code=400, detail="CMAC invalid")
 
 
-@api.post('/nfc/provision')
+@api.post('/nfc/provision', tags=["NFC"])
 async def provision(req: ProvisionRequest, current_user = Depends(get_current_active_user)):
   exists = await HajInfo.exists().where(
       HajInfo.uuid == req.haj_id,
@@ -229,7 +229,7 @@ async def provision(req: ProvisionRequest, current_user = Depends(get_current_ac
     raise HTTPException(401, "This blahaj is either not yours or doesn't exist.")
 
 
-@api.post('/haj/create')
+@api.post('/haj/create', tags=["Haj"])
 async def add_haj(
   req: NewHajRequest = Depends(haj_from_form),
   image: UploadFile = File(...),
@@ -280,7 +280,7 @@ async def add_haj(
   except Exception as e:
     raise HTTPException(status_code=500, detail=str(e))
 
-@api.get('/haj/list', response_model=HajListResponse)
+@api.get('/haj/list', response_model=HajListResponse, tags=["Haj"])
 async def list_hajs(
   current_user = Depends(get_current_active_user)
 ):
@@ -292,7 +292,7 @@ async def list_hajs(
   ).where(HajInfo.human == current_user.id)
   return {"status": "ok", "hajs": hajs}
 
-@api.get('/haj/info/{haj_id}', response_model=HajListResponse)
+@api.get('/haj/info/{haj_id}', response_model=HajListResponse, tags=["Haj"])
 async def haj_info(haj_id: UUID4, current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   if await check_haj_perm(user_id, haj_id):
@@ -316,7 +316,7 @@ async def get_haj_image(haj_id: UUID4, current_user = Depends(get_optional_user)
   raise HTTPException(status_code=403, detail="Not authorized")
 
 
-@api.post('/auth/register')
+@api.post('/auth/register', tags=["Auth"])
 async def register(req: RegisterRequest):
   res = await create_user(req)
   if not res.get('ok'):
@@ -334,7 +334,7 @@ async def register(req: RegisterRequest):
       raise HTTPException(status_code=500, detail=str(res.get('error', 'An error occured while sending you an email, please try again later.')))
   return {"status": "ok"}
 
-@api.post('/auth/new_verification_token')
+@api.post('/auth/new_verification_token', tags=["Auth"])
 async def new_verif_token(req: NewTokenRequest ):
   human = await Humans.objects().get(Humans.email == req.email)
   if human is not None and not human.verified:
@@ -350,7 +350,7 @@ async def new_verif_token(req: NewTokenRequest ):
       raise HTTPException(status_code=500, detail="An error occured while sending you an email, please try again later.")
   return {"status": "ok"}
 
-@api.post('/auth/verify')
+@api.post('/auth/verify', tags=["Auth"])
 async def verify(req: VerifyRequest):
   payload = verify_email_token(req.token)
   if payload is None:
@@ -366,7 +366,7 @@ async def verify(req: VerifyRequest):
     return {"status": "ok", "email": payload.email}
   raise HTTPException(status_code=404, detail="This account does not exist")
 
-@api.post('/auth/token')
+@api.post('/auth/token', tags=["Auth"])
 async def token(response: Response, request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
   user = await authenticate_user(form_data.username, form_data.password)
   if not user:
@@ -380,7 +380,7 @@ async def token(response: Response, request: Request, form_data: OAuth2PasswordR
   return {"username": user.username, "disabled": user.disabled}
 
 
-@api.post('/auth/logout')
+@api.post('/auth/logout', tags=["Auth"])
 async def logout(request: Request, response: Response):
   session_id = request.cookies.get("session")
   if session_id:
@@ -389,7 +389,7 @@ async def logout(request: Request, response: Response):
   return {"status": "ok"}
 
 
-@api.get('/auth/me')
+@api.get('/auth/me', tags=["Auth"])
 async def me(current_user = Depends(get_current_active_user)):
   return {"username": current_user.username, "disabled": current_user.disabled}
 
