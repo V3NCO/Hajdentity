@@ -182,6 +182,13 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     raise HTTPException(status_code=403, detail="User not verified")
   return current_user
 
+
+async def get_optional_user(request: Request) -> UserInDB | None:
+  session_id = request.cookies.get("session")
+  if not session_id:
+    return None
+  return await validate_session(session_id)
+
 def create_verification_token(email: str) -> str:
   return jwt.encode({
     "sub": email,
@@ -200,7 +207,7 @@ def verify_email_token(token: str) -> VerifPayload | None:
   except jwt.PyJWTError:
     return None
 
-async def check_haj_perm(user_id: UUID4, haj_id: UUID4):
+async def check_haj_perm(user_id: UUID4 | None, haj_id: UUID4):
   haj = await HajInfo.objects().get(HajInfo.uuid == haj_id)
   if not haj:
     return False

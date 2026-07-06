@@ -15,7 +15,7 @@ from io import BytesIO
 import secrets
 from urllib.parse import urlparse
 from auth import (
-  check_haj_perm, create_user, authenticate_user, get_current_active_user,
+  check_haj_perm, create_user, authenticate_user, get_current_active_user, get_optional_user,
   create_verification_token, verify_email_token,
   create_session, delete_session, set_session_cookie, clear_session_cookie,
 )
@@ -263,8 +263,9 @@ async def add_haj(
     raise HTTPException(status_code=500, detail=str(e))
 
 @api.get('/haj/image/{haj_id}')
-async def get_haj_id(haj_id: UUID4, current_user = Depends(get_current_active_user)):
-  if check_haj_perm(current_user.id, haj_id):
+async def get_haj_id(haj_id: UUID4, current_user = Depends(get_optional_user)):
+  user_id = current_user.id if current_user else None
+  if await check_haj_perm(user_id, haj_id):
     try:
       obj = s3.get_object(settings.s3.bucket, f"hajs/{haj_id}")
       return StreamingResponse(
@@ -274,6 +275,7 @@ async def get_haj_id(haj_id: UUID4, current_user = Depends(get_current_active_us
       )
     except Exception:
       raise HTTPException(status_code=404, detail="Image not found")
+  raise HTTPException(status_code=403, detail="Not authorized")
 
 
 @api.post('/auth/register')
