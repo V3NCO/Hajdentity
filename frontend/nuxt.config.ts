@@ -22,5 +22,11 @@ export default defineNuxtConfig({
     localApiEndpoint: '/_nuxt_icon_api'
   },
 
-  modules: ['@nuxt/icon']
+  modules: ['@nuxt/icon'],
+
+  runtimeConfig: {
+    public: {
+      apiBase: ''
+    }
+  }
 })
