@@ -1,11 +1,61 @@
 <script setup lang="ts">
 const secret = ref(false)
 let buffer = ''
+const fileError = ref('')
+const preview = ref('')
+const dragging = ref(false)
+const fileInput = ref<HTMLInputElement>()
 
 function onKeydown(e: KeyboardEvent) {
   buffer += e.key.toLowerCase()
   buffer = buffer.slice(-3)
   if (buffer === 'sad') secret.value = true
+}
+
+function getFile(file: File) {
+  fileError.value = ''
+
+  if (file.size > 10 * 1024 * 1024) {
+    fileError.value = 'Max 10MB'
+    preview.value = ''
+    return
+  }
+
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowed.includes(file.type)) {
+    fileError.value = 'JPEG, PNG, WebP, or GIF only'
+    preview.value = ''
+    return
+  }
+
+  const img = new Image()
+  preview.value = URL.createObjectURL(file)
+  img.src = preview.value
+}
+
+function onFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) getFile(file)
+}
+
+function onDragOver(e: DragEvent) {
+  e.preventDefault()
+  dragging.value = true
+}
+
+function onDragLeave() {
+  dragging.value = false
+}
+
+function onDrop(e: DragEvent) {
+  e.preventDefault()
+  dragging.value = false
+  const file = e.dataTransfer?.files?.[0]
+  if (!file) return
+  const dt = new DataTransfer()
+  dt.items.add(file)
+  if (fileInput.value) fileInput.value.files = dt.files
+  getFile(file)
 }
 </script>
 
@@ -14,6 +64,7 @@ function onKeydown(e: KeyboardEvent) {
   <div class="vcont">
     <h1>New Plush</h1>
     <form ref="registerForm" autocomplete="off" data-1p-ignore data-bwignore data-lpignore="true" data-form-type="other" @keydown="onKeydown">
+      <h2 style="margin: 0.25em;"><span style="color: dimgrey; font-weight: 300;">1.</span> Tell us about your companion :3</h2>
       <div class="field">
         <input
           id="name"
@@ -81,7 +132,7 @@ function onKeydown(e: KeyboardEvent) {
             name="gender"
             type="text"
           />
-          <label for="location">Gender</label>
+          <label for="gender">Gender</label>
         </div>
         <div class="field">
           <input
@@ -89,7 +140,7 @@ function onKeydown(e: KeyboardEvent) {
             name="pronouns"
             type="text"
           />
-          <label for="location">Pronouns</label>
+          <label for="pronouns">Pronouns</label>
         </div>
       </div>
 
@@ -137,6 +188,29 @@ function onKeydown(e: KeyboardEvent) {
         />
         <label for="mloftearsabsorbed">mL of tears absorbed</label>
       </div>
+      <h2 style="margin: 0.25em;"><span style="color: dimgrey; font-weight: 300;">2.</span> Show us what your plush looks like!</h2>
+      <div
+        class="field file-field"
+        :class="{ dragging: dragging }"
+        @dragenter.prevent="dragging = true"
+        @dragover="onDragOver"
+        @dragleave="onDragLeave"
+        @drop="onDrop"
+      >
+        <input
+          ref="fileInput"
+          id="image"
+          name="image"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          @change="onFileChange"
+        />
+        <label for="image">Click or Drag here</label>
+        <p class="imgrec">(Max 10MB, PNG, JPEG, WEBP and GIF supported, 4:3 recommended)</p>
+        <span class="file-error" v-if="fileError">{{ fileError }}</span>
+      </div>
+
+
       <button type="submit">Submit</button>
     </form>
   </div>
@@ -304,5 +378,50 @@ textarea:user-invalid {
 #description {
   height: 4.5rem;
   resize: none;
+}
+
+.file-field {
+  min-height: 6rem;
+  border: 2px dashed gray;
+  border-radius: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.file-field.dragging {
+  background-color: #FFFFFF0F;
+}
+
+.field input[type="file"] {
+  height: 100%;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: dimgray;
+  opacity: 0;
+}
+
+.file-field label {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  font-size: 0.9rem !important;
+  color: dimgray !important;
+}
+
+.file-error {
+  position: absolute;
+  bottom: 0.3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #F7CACE;
+  color: #D94A4A;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.8rem;
+  border-radius: 1rem;
+}
+
+.imgrec {
+  margin-top: 0.5em;
 }
 </style>
