@@ -6,6 +6,14 @@ const preview = ref('')
 const dragging = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const submitting = ref(false)
+import cardsCss from '~/assets/css/cards.css?raw'
+
+
+useSeoMeta({
+  title: 'New Plushie',
+})
+useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: cardsCss }] })
+
 
 const state = reactive({
   name: undefined,
@@ -202,7 +210,7 @@ async function onSubmit() {
       <div class="field">
         <input
           id="lastwashed"
-          v-model="state.lastwash"
+          v-model="state.lastwashed"
           name="lastwashed"
           type="datetime-local"
           placeholder=""
@@ -275,6 +283,24 @@ async function onSubmit() {
     </form>
   </div>
 </div>
+<div class="rcont">
+  <h1>Previews</h1>
+  <div class="vrcont">
+    <div
+      :style="{ backgroundImage: `url(${preview})`, width: `20rem` }"
+      class="card"
+    >
+      <div class="gradient">
+        <h1>{{ state.name }}</h1>
+        <span>
+          <Icon v-if="false" name="material-symbols:public" title="Public"/>
+          <Icon v-else name="material-symbols:lock" title="Private"/>
+          <p>{{ state.pronouns }}</p>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
 </template>
 
 <style>
@@ -292,17 +318,31 @@ body {
   height: 100%;
 }
 
-.lcont, .vcont {
+.lcont, .rcont, .vcont {
   box-sizing: border-box;
 }
 
-.lcont {
+.lcont, .rcont {
   width: 50vw;
   height: 100svh;
   position: relative;
-  float: left;
   padding: 1em;
   overflow: hidden;
+  box-sizing: border-box;
+}
+
+.lcont { float: left; }
+.rcont { float: right; }
+
+.vrcont {
+  padding: 1em;
+  height: fit-content;
+  max-width: 100%;
+  background-image: linear-gradient(147deg, #9FB2CACC, #5D7798CC);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .vcont {
