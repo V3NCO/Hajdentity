@@ -5,6 +5,22 @@ const fileError = ref('')
 const preview = ref('')
 const dragging = ref(false)
 const fileInput = ref<HTMLInputElement>()
+const submitting = ref(false)
+
+const state = reactive({
+  name: undefined,
+  date: undefined,
+  size: undefined,
+  description: undefined,
+  location: undefined,
+  gender: undefined,
+  pronouns: undefined,
+  lastwashed: undefined,
+  floof: undefined,
+  squish: undefined,
+  mloftearsabsorbed: undefined
+})
+
 
 function onKeydown(e: KeyboardEvent) {
   buffer += e.key.toLowerCase()
@@ -57,17 +73,50 @@ function onDrop(e: DragEvent) {
   if (fileInput.value) fileInput.value.files = dt.files
   getFile(file)
 }
+
+async function onSubmit() {
+  const file = fileInput.value?.files?.[0]
+  if (!file) {
+    fileError.value = 'Image is required'
+    return
+  }
+
+  submitting.value = true
+  fileError.value = ''
+
+  const form = new FormData()
+  form.append('image', file)
+  for (const [key, val] of Object.entries(state)) {
+    if (val !== undefined && val !== '') form.append(key, String(val))
+  }
+
+  try {
+    const res = await $fetch('/api/haj/create', {
+      method: 'POST',
+      body: form,
+      credentials: 'include'
+    })
+    console.log(res)
+    submitting.value = false
+    await navigateTo('/dashboard/plushies')
+  } catch (e: any) {
+    fileError.value = e?.data?.detail || 'Upload failed'
+    submitting.value = false
+  }
+}
+
 </script>
 
 <template>
 <div class="lcont">
   <div class="vcont">
     <h1>New Plush</h1>
-    <form ref="registerForm" autocomplete="off" data-1p-ignore data-bwignore data-lpignore="true" data-form-type="other" @keydown="onKeydown">
+    <form @keydown="onKeydown" @submit.prevent="onSubmit" ref="registerForm" autocomplete="off" data-1p-ignore data-bwignore data-lpignore="true" data-form-type="other">
       <h2 style="margin: 0.25em;"><span style="color: dimgrey; font-weight: 300;">1.</span> Tell us about your companion :3</h2>
       <div class="field">
         <input
           id="name"
+          v-model="state.name"
           name="name"
           type="text"
           placeholder=" "
@@ -83,6 +132,7 @@ function onDrop(e: DragEvent) {
         <div class="field">
           <input
             id="date"
+            v-model="state.date"
             name="date"
             type="date"
             required
@@ -93,6 +143,7 @@ function onDrop(e: DragEvent) {
         <div class="field">
           <input
             id="size"
+            v-model="state.size"
             name="size"
             placeholder="55cm or 100cm"
             type="number"
@@ -107,6 +158,7 @@ function onDrop(e: DragEvent) {
       <div class="field">
         <textarea
           id="description"
+          v-model="state.description"
           name="description"
           rows="3"
           placeholder=" "
@@ -118,6 +170,7 @@ function onDrop(e: DragEvent) {
       <div class="field">
         <input
           id="location"
+          v-model="state.location"
           name="location"
           placeholder="IKEA San Francisco"
           type="text"
@@ -129,6 +182,7 @@ function onDrop(e: DragEvent) {
         <div class="field">
           <input
             id="gender"
+            v-model="state.gender"
             name="gender"
             type="text"
           />
@@ -137,6 +191,7 @@ function onDrop(e: DragEvent) {
         <div class="field">
           <input
             id="pronouns"
+            v-model="state.pronouns"
             name="pronouns"
             type="text"
           />
@@ -147,6 +202,7 @@ function onDrop(e: DragEvent) {
       <div class="field">
         <input
           id="lastwashed"
+          v-model="state.lastwash"
           name="lastwashed"
           type="datetime-local"
           placeholder=""
@@ -159,6 +215,7 @@ function onDrop(e: DragEvent) {
           <input
             id="floof"
             name="floof"
+            v-model="state.floof"
             placeholder="1 to 10"
             type="number"
             min="1"
@@ -170,6 +227,7 @@ function onDrop(e: DragEvent) {
         <div class="field">
           <input
             id="squish"
+            v-model="state.squish"
             name="squish"
             placeholder="1 to 10"
             type="number"
@@ -183,6 +241,7 @@ function onDrop(e: DragEvent) {
       <div class="field" v-if="secret">
         <input
           id="mloftearsabsorbed"
+          v-model="state.mloftearsabsorbed"
           name="mloftearsabsorbed"
           type="number"
         />
@@ -204,6 +263,7 @@ function onDrop(e: DragEvent) {
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
           @change="onFileChange"
+          required
         />
         <label for="image">Click or Drag here</label>
         <p class="imgrec">(Max 10MB, PNG, JPEG, WEBP and GIF supported, 4:3 recommended)</p>
@@ -249,6 +309,7 @@ body {
   padding: 1em;
   height: 100%;
   width: 100%;
+  overflow-y: auto;
   background-image: linear-gradient(147deg, #9FB2CACC, #5D7798CC);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -274,7 +335,6 @@ form {
   flex-direction: column;
   margin-top: 1.5rem;
   gap: 1rem;
-  height: 100%;
   width: 100%;
 }
 
