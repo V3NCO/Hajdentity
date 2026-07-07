@@ -25,3 +25,6 @@ python api/main.py
 # Frontend/Nuxt
 cd frontend && yarn dev
 ```
+
+## Credit
+Thanks to IsabelleDotJpeg for the [blahaj model](https://www.reddit.com/r/BLAHAJ/comments/rkul4y/bl%C3%A5haj_now_on_ps1/)! (used for the loading screen gif)

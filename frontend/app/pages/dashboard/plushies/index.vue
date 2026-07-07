@@ -24,6 +24,12 @@ onMounted(async () => {
 </script>
 
 <template>
+  <Transition><div v-if="loading" class="loading">
+    <h1>Loading...</h1>
+    <video autoplay loop muted playsinline>
+      <source src="/blahaj.webm" type="video/webm">
+    </video>
+  </div></Transition>
   <div v-if="error && !loading">Error: {{ error }}</div>
   <div v-else class="cards">
     <a href="/dashboard/plushies/new" class="card new">
@@ -124,5 +130,31 @@ onMounted(async () => {
 .plus {
   font-size: 3rem;
   align-self: flex-end;
+}
+
+.loading {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: pink;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: black;
+  flex-direction: column;
+  font-family: "Noto Sans", sans-serif;
+}
+
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.9s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
 }
 </style>
