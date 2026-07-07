@@ -66,10 +66,29 @@ class HajListItem(BaseModel):
   pronouns: str | None = None
   public: bool = True
 
+class HajItem(BaseModel):
+  uuid: UUID4
+  human: UUID4
+  name: str
+  date: datetime.date
+  size: int
+  description: str
+  location: str| None = None
+  pronouns: str | None = None
+  gender: str | None = None
+  floof: int | None = None
+  squish: int | None = None
+  lastwashed: datetime.datetime | None = None
+  mloftearsabsorbed: int | None = None
+  public: bool = True
+
 class HajListResponse(BaseModel):
   status: str
   hajs: list[HajListItem]
 
+class HajResponse(BaseModel):
+  status: str
+  haj: HajItem
 
 class NewHajRequest(BaseModel):
   name: Annotated[str, Field(max_length=48, )]
@@ -292,7 +311,7 @@ async def list_hajs(
   ).where(HajInfo.human == current_user.id)
   return {"status": "ok", "hajs": hajs}
 
-@api.get('/haj/info/{haj_id}', response_model=HajListResponse, tags=["Haj"])
+@api.get('/haj/info/{haj_id}', response_model=HajResponse, tags=["Haj"])
 async def haj_info(haj_id: UUID4, current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   if await check_haj_perm(user_id, haj_id):
