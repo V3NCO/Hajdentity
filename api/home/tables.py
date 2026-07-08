@@ -64,3 +64,9 @@ class Sessions(Table):
   last_seen_at = Timestamptz(null=False)
   user_agent = Text(null=True)
   ip_address = Varchar(length=45, null=True)
+
+class SharkeyUsers(Table):
+  id = UUID(primary_key=True, null=False)
+  haj = UUID(null=False)
+  sharkey_id = Varchar(length=128, unique=True, null=False)
+  sharkey_key = Text(null=False)

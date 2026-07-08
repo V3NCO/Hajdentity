@@ -59,6 +59,14 @@ class S3Settings(BaseSettings):
     secure: bool = True
     region: str = "garage"
 
+# Note: This instance needs to be dedicated to hajdentity,
+# because we will assume that the only users are the ones in the db
+# We also want to disable captcha for login so yeah
+
+class SharkeySettings(BaseSettings):
+    base_url: HttpUrl = HttpUrl("http://localhost:2456/")
+    admin_api_token: str = ""
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix='HAJDENTITY_',  env_nested_delimiter='__')
     master_key: MasterKey # 16 bytes AES 128 master key
@@ -77,6 +85,7 @@ class Settings(BaseSettings):
     mail: MailSettings = MailSettings()
     db: DatabaseSettings = DatabaseSettings()
     s3: S3Settings = S3Settings()
+    sharkey: SharkeySettings = SharkeySettings()
 
 settings = Settings()  # type: ignore[reportCallIssue]
 

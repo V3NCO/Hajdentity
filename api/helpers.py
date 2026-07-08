@@ -1,5 +1,6 @@
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
+import base64
 from config import settings
 
 def diversify_key(master_key, uid, system_id):
@@ -7,3 +8,15 @@ def diversify_key(master_key, uid, system_id):
   cobj = CMAC.new(master_key, ciphermod=AES)
   cobj.update(div_data)
   return cobj.digest()
+
+def decrypt_token(blob: str, key: bytes) -> str:
+    raw = base64.b64decode(blob)
+
+    nonce = raw[:12]
+    tag = raw[12:28]
+    ciphertext = raw[28:]
+
+    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+    plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+
+    return plaintext.decode()

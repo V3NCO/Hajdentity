@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 import datetime
-from home.tables import Humans, HajInfo, NFCTable
+import httpx
+import string
+from home.tables import Humans, HajInfo, NFCTable, SharkeyUsers
 from fastapi import FastAPI, HTTPException, APIRouter, Depends, Form, Request, Response, UploadFile, File
 from fastapi_mail import MessageSchema, MessageType
 from piccolo.engine import engine_finder
@@ -8,6 +10,8 @@ import uuid
 from pydantic import UUID4, BaseModel, EmailStr, NameEmail
 from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
+from Crypto.Random import get_random_bytes
+import base64
 from helpers import diversify_key
 from config import settings, mail, s3
 from PIL import Image
@@ -58,7 +62,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 api = APIRouter(prefix="/api")
-
+client = httpx.AsyncClient()
 
 class HajListItem(BaseModel):
   uuid: UUID4
@@ -308,6 +312,56 @@ async def add_haj(
       length=size,
       content_type=f"image/{ext}",
     )
+
+    chars = string.ascii_letters + string.digits + string.punctuation
+    password = ''.join(secrets.choice(chars) for _ in range(secrets.randbelow(65) + 64))
+
+    await client.post(
+      url=f"{settings.sharkey.base_url}/api/admin/accounts/create",
+      data={"username": req.username, "password": password},
+      headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"}
+    )
+
+    i = await client.post(
+      url=f"{settings.sharkey.base_url}/api/signin-flow",
+      data={
+        "username": req.username,
+        "password": password,
+        "frc-captcha-solution": None,
+        "hcaptcha-response": None,
+        "g-recaptcha-response": None,
+        "m-captcha-response": None,
+        "turnstile-response": None,
+        "testcaptcha-response": None
+      }
+    )
+    userauth = i.json()["i"]
+
+
+    tokenreq = await client.post(
+      url=f"{settings.sharkey.base_url}/api/miauth/gen-token",
+      data={
+        "session":None,
+        "name":"Hajdentity",
+        "permission":["read:account","write:account","read:blocks","write:blocks","read:drive","write:drive","read:favorites","write:favorites","read:following","write:following","read:messaging","write:messaging","read:mutes","write:mutes","write:notes","read:notes-schedule","write:notes-schedule","read:notifications","write:notifications","read:reactions","write:reactions","write:votes","read:pages","write:pages","write:page-likes","read:page-likes","read:user-groups","write:user-groups","read:channels","write:channels","read:gallery","write:gallery","read:gallery-likes","write:gallery-likes","read:flash","write:flash","read:flash-likes","write:flash-likes","write:invite-codes","read:invite-codes","write:clip-favorite","read:clip-favorite","read:federation","write:report-abuse","write:chat","read:chat"]
+      },
+      headers={"Authorization": f"Bearer {userauth}"}
+    )
+
+    userid = i.json()["id"]
+    token = tokenreq.json()["token"]
+
+    nonce=get_random_bytes(12)
+    cipher = AES.new(bytes.fromhex(settings.secret_key), AES.MODE_GCM, nonce=nonce)
+    ciphertext, tag = cipher.encrypt_and_digest(token.encode())
+
+    blob = nonce + tag + ciphertext
+
+    await SharkeyUsers(
+      haj = haj_id,
+      sharkey_id = userid,
+      sharkey_key = base64.b64encode(blob).decode()
+    ).save()
 
     return {"status": "ok", "uuid": str(haj_id)}
   except Exception as e:
