@@ -267,6 +267,8 @@ async def add_haj(
 ):
   try:
     haj_id = uuid.uuid4()
+    if HajInfo.exists().where(HajInfo.username == req.username):
+      raise HTTPException(status_code=400, detail="Username taken")
     await HajInfo(
       uuid=haj_id,
       human=current_user.id,

@@ -61,8 +61,12 @@ function onInput(field: 'username' | 'email' | 'password') {
 async function onSubmit() {
   if (!validate('all')) return
 
-  await $fetch("/api/auth/register", { method: 'POST', body: { username: username.value, email: email.value, password: password.value } })
-  await navigateTo('/register/verify?sent=true')
+  try {
+    await $fetch("/api/auth/register", { method: 'POST', body: { username: username.value, email: email.value, password: password.value } })
+    await navigateTo('/register/verify?sent=true')
+  } catch (e) {
+    alert((e as any)?.response?._data?.detail || (e as any)?.data?.detail || 'Registration failed')
+  }
 }
 
 </script>

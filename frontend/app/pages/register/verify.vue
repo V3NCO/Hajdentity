@@ -36,8 +36,12 @@ if (sent) {
 
 
 async function onSubmit() {
-  await $fetch("/api/auth/new_verification_token", { method: 'POST', body: { email: email.value } })
-  alert("An email has been sent if the email is registered and unverified. Please check your inbox and spam.")
+  try {
+    await $fetch("/api/auth/new_verification_token", { method: 'POST', body: { email: email.value } })
+    alert("An email has been sent if the email is registered and unverified. Please check your inbox and spam.")
+  } catch (e) {
+    alert((e as any)?.response?._data?.detail || (e as any)?.data?.detail || 'Failed to resend verification email')
+  }
 }
 
 useSeoMeta({

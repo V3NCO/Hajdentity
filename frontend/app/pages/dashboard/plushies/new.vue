@@ -16,7 +16,8 @@ useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: cardsCss }] })
 
 
 const state = reactive({
-  name: undefined,
+  displayname: undefined,
+  username: undefined,
   date: undefined,
   size: undefined,
   description: undefined,
@@ -123,17 +124,31 @@ async function onSubmit() {
       <h2 style="margin: 0.25em;"><span style="color: dimgrey; font-weight: 300;">1.</span> Tell us about your companion :3</h2>
       <div class="field">
         <input
-          id="name"
-          v-model="state.name"
-          name="name"
+          id="username"
+          v-model="state.username"
+          name="username"
           type="text"
           placeholder=" "
           minlength="3"
           maxlength="96"
-          pattern="(?:[A-Za-z0-9_]|-){3,96}"
+          pattern="(?:[a-z0-9_]|-){3,48}"
           required
         />
-        <label for="name">Name *</label>
+        <label for="name">Username *</label>
+      </div>
+      <div class="field">
+        <input
+          id="displayname"
+          v-model="state.displayname"
+          name="displayname"
+          type="text"
+          placeholder=" "
+          minlength="3"
+          maxlength="96"
+          pattern="(?:[A-Za-z0-9_]|-){3,48}"
+          required
+        />
+        <label for="name">Display Name *</label>
       </div>
 
       <div class="half">
@@ -481,7 +496,6 @@ textarea:user-invalid {
 }
 
 .file-field {
-  min-height: 6rem;
   border: 2px dashed gray;
   border-radius: 1.5rem;
   margin-bottom: 2rem;
