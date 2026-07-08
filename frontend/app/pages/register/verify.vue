@@ -118,4 +118,9 @@ a {
   font-weight: 600;
   padding: 0.5rem 1rem;
 }
+@media screen and (max-width: 790px) {
+	.rcont {
+	  width: 100vw
+	}
+}
 </style>

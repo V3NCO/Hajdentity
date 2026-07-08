@@ -587,4 +587,10 @@ textarea:user-invalid {
     outline: none;
     box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.4);
 }
+
+@media screen and (max-width: 790px) {
+	.lcont {
+	  width: 100vw
+	}
+}
 </style>

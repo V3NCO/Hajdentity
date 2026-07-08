@@ -116,4 +116,9 @@ async function onSubmit() {
 p {
   margin: 0;
 }
+@media screen and (max-width: 790px) {
+	.rcont {
+	  width: 100vw
+	}
+}
 </style>

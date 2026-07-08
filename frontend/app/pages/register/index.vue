@@ -126,5 +126,9 @@ async function onSubmit() {
 </template>
 
 <style scoped>
-@import url('~/assets/css/auth.css');
+@media screen and (max-width: 790px) {
+	.rcont {
+	  width: 100vw
+	}
+}
 </style>
