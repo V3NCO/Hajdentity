@@ -23,7 +23,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import StreamingResponse
 from scalar_fastapi import get_scalar_api_reference
 from typing import Annotated
-from pydantic import Field
+from pydantic import Field, field_validator
 from emails import verify_mail_template
 
 
@@ -62,14 +62,15 @@ api = APIRouter(prefix="/api")
 
 class HajListItem(BaseModel):
   uuid: UUID4
-  name: str
+  displayname: str
   pronouns: str | None = None
   public: bool = True
 
 class HajItem(BaseModel):
   uuid: UUID4
   human: UUID4
-  name: str
+  displayname: str
+  username: str
   date: datetime.date
   size: int
   description: str
@@ -91,7 +92,8 @@ class HajResponse(BaseModel):
   haj: HajItem
 
 class NewHajRequest(BaseModel):
-  name: Annotated[str, Field(max_length=48, )]
+  username: Annotated[str, Field(pattern=r"^[a-z0-9_-]{3,48}$")]
+  displayname: Annotated[str, Field(min_length=1, max_length=48)]
   date: datetime.date
   size: float
   location: str | None = None
@@ -104,8 +106,17 @@ class NewHajRequest(BaseModel):
   mloftearsabsorbed: float | None = None
   public: bool = True
 
+  @field_validator("displayname", mode="before")
+  @classmethod
+  def clean_displayname(cls, v: str) -> str:
+    cleaned = v.strip()
+    if not cleaned:
+      raise ValueError("Display name cannot be blank")
+    return cleaned
+
 def haj_from_form(
-  name: Annotated[str, Form(max_length=48)],
+  displayname: Annotated[str, Form(min_length=1, max_length=48)],
+  username: Annotated[str, Form(pattern=r"^[a-z0-9_-]{3,48}$")],
   date: Annotated[datetime.date, Form()],
   size: Annotated[float, Form()],
   description: Annotated[str, Form()],
@@ -119,9 +130,9 @@ def haj_from_form(
   public: bool = True
 ) -> NewHajRequest:
   return NewHajRequest(
-    name=name, date=date, size=size, location=location,
-    description=description, pronouns=pronouns, gender=gender,
-    floof=floof, squish=squish, lastwashed=lastwashed,
+    displayname=displayname,username=username, date=date, size=size,
+    location=location, description=description, pronouns=pronouns,
+    gender=gender, floof=floof, squish=squish, lastwashed=lastwashed,
     mloftearsabsorbed=mloftearsabsorbed, public=public
   )
 
@@ -259,7 +270,8 @@ async def add_haj(
     await HajInfo(
       uuid=haj_id,
       human=current_user.id,
-      name=req.name,
+      displayname=req.displayname,
+      username=req.username,
       date=req.date,
       size = req.size,
       location = req.location,
@@ -306,7 +318,7 @@ async def list_hajs(
   hajs = await HajInfo.select(
     HajInfo.uuid,
     HajInfo.pronouns,
-    HajInfo.name,
+    HajInfo.displayname,
     HajInfo.public,
   ).where(HajInfo.human == current_user.id)
   return {"status": "ok", "hajs": hajs}

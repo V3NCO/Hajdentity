@@ -33,7 +33,8 @@ class NFCTable(Table):
 class HajInfo(Table):
   uuid = UUID(unique=True, null=False, index=True)
   human = UUID(null=False)
-  name = Varchar(255, null=False)
+  displayname = Varchar(255, null=False)
+  username = Varchar(255, null=False)
   date = Date(null=False)
   size = Numeric(null=False)
   location = Text(null=True)

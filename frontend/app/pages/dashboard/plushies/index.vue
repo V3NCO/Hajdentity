@@ -48,7 +48,7 @@ onMounted(async () => {
       :href="`/dashboard/plushies/${plush.uuid}`"
     >
       <div class="gradient">
-        <h1>{{ plush.name }}</h1>
+        <h1>{{ plush.displayname }}</h1>
         <span>
           <Icon v-if="plush.public" name="material-symbols:public" title="Public"/>
           <Icon v-else name="material-symbols:lock" title="Private"/>
