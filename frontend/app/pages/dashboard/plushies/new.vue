@@ -27,7 +27,8 @@ const state = reactive({
   lastwashed: undefined,
   floof: undefined,
   squish: undefined,
-  mloftearsabsorbed: undefined
+  mloftearsabsorbed: undefined,
+  public: undefined
 })
 
 
@@ -270,6 +271,12 @@ async function onSubmit() {
         />
         <label for="mloftearsabsorbed">mL of tears absorbed</label>
       </div>
+
+      <span style="display: flex; align-items: center; font-size: 1.5em; gap: 0.8rem;">
+        <input class="toggle" type="checkbox" id="public" v-model="state.public"/>
+        <label for="public">Public Profile</label>
+      </span>
+
       <h2 style="margin: 0.25em;"><span style="color: dimgrey; font-weight: 300;">2.</span> Show us what your plush looks like!</h2>
       <div
         class="field file-field"
@@ -306,9 +313,9 @@ async function onSubmit() {
       class="card"
     >
       <div class="gradient">
-        <h1>{{ state.name }}</h1>
+        <h1>{{ state.displayname }}</h1>
         <span>
-          <Icon v-if="false" name="material-symbols:public" title="Public"/>
+          <Icon v-if="state.public" name="material-symbols:public" title="Public"/>
           <Icon v-else name="material-symbols:lock" title="Private"/>
           <p>{{ state.pronouns }}</p>
         </span>
@@ -537,5 +544,47 @@ textarea:user-invalid {
 
 .imgrec {
   margin-top: 0.5em;
+}
+
+
+
+.toggle {
+    border: 0.2rem solid #95adb6;
+    border-radius: calc( 2.5rem / 2 );
+    width: 4.5rem;
+    height: 2.5rem;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    transition: transform 0.07s;
+    cursor: pointer;
+}
+
+.toggle::after {
+    content: "";
+    display: inline-block;
+    margin: 0.2rem;
+    border-radius: 50%;
+    width: 1.7rem;
+    height: 1.7rem;
+    background: #31404f;
+    transition: transform 0.07s linear;
+}
+
+.toggle:checked::after {
+    transform: translateX(2rem);
+}
+
+.toggle:hover {
+    transform: scale(1.07);
+}
+
+.toggle:active {
+    transform: scale(1.0);
+}
+
+.toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.4);
 }
 </style>
