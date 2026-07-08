@@ -74,7 +74,8 @@ class Settings(BaseSettings):
     system_id: SystemID # The ASCII bytes of the system identifier for this specific instance of the app, it shouldnt be changed to "prod", rather something describing the instance
     base_url: HttpUrl = HttpUrl("https://id.blahaj.engineering/") # The base URL
     key3: Key3 # Key 3 is used to encode and decode the URL
-    secret_key: Annotated[str, Field(min_length=128, max_length=128)]  # Secret key for encryption of user passwords in database
+    secret_key: Annotated[str, Field(min_length=128, max_length=128)]  # Secret key for JWT
+    token_enc: Annotated[str, Field(min_length=64, max_length=64)] # 32 byte key for token encryption
     session_idle_minutes: int = 43200 # Session idle timeout in minutes (30 days)
     session_absolute_days: int = 90 # Max session lifetime regardless of activity
     verification_token_expire_minutes: int = 1440 # Minutes until verification token expires

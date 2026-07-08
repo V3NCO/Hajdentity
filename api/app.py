@@ -269,9 +269,10 @@ async def add_haj(
   image: UploadFile = File(...),
   current_user = Depends(get_current_active_user)
 ):
+  haj_id = uuid.uuid4()
+  i = None
   try:
-    haj_id = uuid.uuid4()
-    if HajInfo.exists().where(HajInfo.username == req.username):
+    if await HajInfo.exists().where(HajInfo.username == req.username):
       raise HTTPException(status_code=400, detail="Username taken")
     await HajInfo(
       uuid=haj_id,
@@ -318,13 +319,13 @@ async def add_haj(
 
     await client.post(
       url=f"{settings.sharkey.base_url}/api/admin/accounts/create",
-      data={"username": req.username, "password": password},
+      json={"username": req.username, "password": password},
       headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"}
     )
 
     i = await client.post(
       url=f"{settings.sharkey.base_url}/api/signin-flow",
-      data={
+      json={
         "username": req.username,
         "password": password,
         "frc-captcha-solution": None,
@@ -335,12 +336,14 @@ async def add_haj(
         "testcaptcha-response": None
       }
     )
+
+    userid = i.json()["id"]
     userauth = i.json()["i"]
 
 
     tokenreq = await client.post(
       url=f"{settings.sharkey.base_url}/api/miauth/gen-token",
-      data={
+      json={
         "session":None,
         "name":"Hajdentity",
         "permission":["read:account","write:account","read:blocks","write:blocks","read:drive","write:drive","read:favorites","write:favorites","read:following","write:following","read:messaging","write:messaging","read:mutes","write:mutes","write:notes","read:notes-schedule","write:notes-schedule","read:notifications","write:notifications","read:reactions","write:reactions","write:votes","read:pages","write:pages","write:page-likes","read:page-likes","read:user-groups","write:user-groups","read:channels","write:channels","read:gallery","write:gallery","read:gallery-likes","write:gallery-likes","read:flash","write:flash","read:flash-likes","write:flash-likes","write:invite-codes","read:invite-codes","write:clip-favorite","read:clip-favorite","read:federation","write:report-abuse","write:chat","read:chat"]
@@ -348,11 +351,10 @@ async def add_haj(
       headers={"Authorization": f"Bearer {userauth}"}
     )
 
-    userid = i.json()["id"]
     token = tokenreq.json()["token"]
 
     nonce=get_random_bytes(12)
-    cipher = AES.new(bytes.fromhex(settings.secret_key), AES.MODE_GCM, nonce=nonce)
+    cipher = AES.new(bytes.fromhex(settings.token_enc), AES.MODE_GCM, nonce=nonce)
     ciphertext, tag = cipher.encrypt_and_digest(token.encode())
 
     blob = nonce + tag + ciphertext
@@ -364,8 +366,16 @@ async def add_haj(
     ).save()
 
     return {"status": "ok", "uuid": str(haj_id)}
-  except Exception as e:
-    raise HTTPException(status_code=500, detail=str(e))
+  except Exception:
+    await HajInfo.delete().where(HajInfo.uuid == haj_id)
+    s3.remove_object(settings.s3.bucket, f"hajs/{haj_id}")
+    if i is not None:
+      await client.post(
+        url=f"{settings.sharkey.base_url}/api/admin/delete-account",
+        json={"userId":i.json()["id"]},
+        headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"}
+      )
+    raise HTTPException(status_code=500, detail="Something went wrong, try again later.")
 
 @api.get('/haj/list', response_model=HajListResponse, tags=["Haj"])
 async def list_hajs(

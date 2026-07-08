@@ -9,14 +9,14 @@ def diversify_key(master_key, uid, system_id):
   cobj.update(div_data)
   return cobj.digest()
 
-def decrypt_token(blob: str, key: bytes) -> str:
+def decrypt_token(blob: str) -> str:
     raw = base64.b64decode(blob)
 
     nonce = raw[:12]
     tag = raw[12:28]
     ciphertext = raw[28:]
 
-    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+    cipher = AES.new(bytes.fromhex(settings.token_enc), AES.MODE_GCM, nonce=nonce)
     plaintext = cipher.decrypt_and_verify(ciphertext, tag)
 
     return plaintext.decode()
