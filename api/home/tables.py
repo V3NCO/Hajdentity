@@ -45,7 +45,6 @@ class HajInfo(Table):
   squish = Integer(null=True)
   lastwashed = Timestamptz(null=True)
   mloftearsabsorbed = Numeric(null=True)
-  public = Boolean(default=True)
 
 
 class Humans(Table):

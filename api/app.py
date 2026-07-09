@@ -68,7 +68,6 @@ class HajListItem(BaseModel):
   uuid: UUID4
   displayname: str
   pronouns: str | None = None
-  public: bool = True
 
 class HajItem(BaseModel):
   uuid: UUID4
@@ -85,7 +84,6 @@ class HajItem(BaseModel):
   squish: int | None = None
   lastwashed: datetime.datetime | None = None
   mloftearsabsorbed: int | None = None
-  public: bool = True
 
 class HajListResponse(BaseModel):
   status: str
@@ -109,7 +107,6 @@ class NewHajRequest(BaseModel):
   squish: Annotated[int, Field(ge=1, le=10)] | None = None
   lastwashed: datetime.datetime | None = None
   mloftearsabsorbed: float | None = None
-  public: bool = True
 
   @field_validator("displayname", mode="before")
   @classmethod
@@ -132,13 +129,12 @@ def haj_from_form(
   squish: Annotated[int | None, Form(ge=1, le=10)] = None,
   lastwashed: Annotated[datetime.datetime | None, Form()] = None,
   mloftearsabsorbed: Annotated[float | None, Form()] = None,
-  public: bool = True
 ) -> NewHajRequest:
   return NewHajRequest(
     displayname=displayname,username=username, date=date, size=size,
     location=location, description=description, pronouns=pronouns,
     gender=gender, floof=floof, squish=squish, lastwashed=lastwashed,
-    mloftearsabsorbed=mloftearsabsorbed, public=public
+    mloftearsabsorbed=mloftearsabsorbed
   )
 
 class VerifyRequest(BaseModel):
@@ -226,7 +222,10 @@ async def nfc_auth(tap: NfcRequest):
   calculated_mac_hex = calculated_mac_bytes.hex().upper()
 
   if tap.cmac.upper() != calculated_mac_hex:
-      raise HTTPException(status_code=400, detail="CMAC invalid")
+    raise HTTPException(status_code=400, detail="CMAC invalid")
+
+  if tag.last_counter is not None and counter <= tag.last_counter:
+    raise HTTPException(status_code=400, detail="Counter is too old, try tapping the tag physically again")
 
   await tag.update({NFCTable.last_counter: counter})
 
@@ -280,7 +279,7 @@ async def add_haj(
     if await HajInfo.exists().where(HajInfo.username == req.username):
       raise HTTPException(status_code=400, detail="Username taken")
     await HajInfo( uuid=haj_id, human=current_user.id, displayname=req.displayname, username=req.username, date=req.date, size = req.size, location = req.location,
-      description = req.description, pronouns = req.pronouns, gender = req.gender, floof = req.floof, squish = req.squish, lastwashed = req.lastwashed, mloftearsabsorbed= req.mloftearsabsorbed, public=req.public
+      description = req.description, pronouns = req.pronouns, gender = req.gender, floof = req.floof, squish = req.squish, lastwashed = req.lastwashed, mloftearsabsorbed= req.mloftearsabsorbed
     ).save()
     try:
       img = Image.open(image.file)
@@ -385,11 +384,11 @@ async def add_haj(
       url=f"{settings.sharkey.base_url}api/i/update",
       json={
         "bannerId": bannerreq.json()["id"], "avatarId": pfpreq.json()["id"],
-        "noCrawle":not req.public, "noindex": not req.public, "requireSigninToViewContents": not req.public,
-        "enableRss":req.public, "isExplorable":req.public, "publicReactions": req.public,
-        "makeNotesFollowersOnlyBefore":None if req.public else 1, "makeNotesHiddenBefore":None if req.public else 0,
-        "followingVisibility":"public" if req.public else "private", "followersVisibility":"public" if req.public else "private",
-        "chatScope":"mutual" if req.public else "none",
+        "noCrawle":False, "noindex": False, "requireSigninToViewContents": False,
+        "enableRss":True, "isExplorable":True, "publicReactions": True,
+        "makeNotesFollowersOnlyBefore":None, "makeNotesHiddenBefore":None ,
+        "followingVisibility":"public", "followersVisibility":"public",
+        "chatScope":"mutual",
         "name": req.displayname, "birthday": req.date.strftime("%Y-%m-%d"), "location": req.location, "description": description_block,
         "attributionDomains": [settings.base_url.host],
         "autoAcceptFollowed":True,

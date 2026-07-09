@@ -32,7 +32,6 @@ const state = reactive({
   floof: undefined,
   squish: undefined,
   mloftearsabsorbed: undefined,
-  public: undefined
 })
 
 
@@ -337,11 +336,6 @@ async function onSubmit() {
         <label for="mloftearsabsorbed">mL of tears absorbed</label>
       </div>
 
-      <span style="display: flex; align-items: center; font-size: 1.5em; gap: 0.8rem;">
-        <input class="toggle" type="checkbox" id="public" v-model="state.public"/>
-        <label for="public">Public Profile</label>
-      </span>
-
       <h2 style="margin: 0.25em;"><span style="color: dimgrey; font-weight: 300;">2.</span> Show us what your plush looks like!</h2>
       <div
         class="field file-field"
@@ -403,8 +397,6 @@ async function onSubmit() {
       <div class="gradient">
         <h1>{{ state.displayname }}</h1>
         <span>
-          <Icon v-if="state.public" name="material-symbols:public" title="Public"/>
-          <Icon v-else name="material-symbols:lock" title="Private"/>
           <p>{{ state.pronouns }}</p>
         </span>
       </div>

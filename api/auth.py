@@ -209,10 +209,6 @@ def verify_email_token(token: str) -> VerifPayload | None:
 
 async def check_haj_perm(user_id: UUID4 | None, haj_id: UUID4):
   haj = await HajInfo.objects().get(HajInfo.uuid == haj_id)
-  if not haj:
-    return False
-  if not haj.public:
-    if haj.human == user_id:
-      return True
-    return False
-  return True
+  if haj:
+    return True
+  return False

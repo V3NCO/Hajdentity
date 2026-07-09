@@ -50,8 +50,6 @@ onMounted(async () => {
       <div class="gradient">
         <h1>{{ plush.displayname }}</h1>
         <span>
-          <Icon v-if="plush.public" name="material-symbols:public" title="Public"/>
-          <Icon v-else name="material-symbols:lock" title="Private"/>
           <p>{{ plush.pronouns }}</p>
         </span>
       </div>
