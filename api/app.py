@@ -410,7 +410,6 @@ async def add_haj(
     nonce=get_random_bytes(12)
     cipher = AES.new(bytes.fromhex(settings.token_enc), AES.MODE_GCM, nonce=nonce)
     ciphertext, tag = cipher.encrypt_and_digest(token.encode())
-
     blob = nonce + tag + ciphertext
 
     await SharkeyUsers(
@@ -420,16 +419,11 @@ async def add_haj(
     ).save()
 
     return {"status": "ok", "uuid": str(haj_id)}
-  except Exception as e:
+  except Exception:
     await HajInfo.delete().where(HajInfo.uuid == haj_id)
     s3.remove_object(settings.s3.bucket, f"hajs/{haj_id}")
     if i is not None:
-      await client.post(
-        url=f"{settings.sharkey.base_url}api/admin/delete-account",
-        json={"userId":i.json()["id"]},
-        headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"}
-      )
-    print(e)
+      await client.post(url=f"{settings.sharkey.base_url}api/admin/delete-account", json={"userId":i.json()["id"]}, headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"})
     raise HTTPException(status_code=500, detail="Something went wrong, try again later.")
 
 @api.get('/hajs', response_model=HajListResponse, tags=["Haj"])
