@@ -1,5 +1,20 @@
+<script setup lang="ts">
+  import '~/assets/css/fonts.css'
+
+  const displayName = "Raine";
+  const username = "raine";
+  const pronouns = "they/them";
+  const location = "France";
+  const description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin imperdiet ultricies risus vitae pellentesque. Morbi porta, nisl nec viverra  aliquet, eros mauris rutrum magna,";
+</script>
+
 <template>
 <div class="bento">
+  <div class="tile">
+    <h1 class="topline">{{displayName}} <span class="pronouns">{{pronouns}}</span> <span class="location">📍 {{location}}</span></h1>
+    <h2 class="username">@{{username}}</h2>
+    <p>{{description}}</p>
+  </div>
   <div class="tile"></div>
   <div class="tile"></div>
   <div class="tile"></div>
@@ -34,6 +49,7 @@ body {
 
 .bento {
   display: grid;
+  font-family:  "Space Grotesk";
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(5, 1fr);
   height:100svh;
@@ -45,12 +61,47 @@ body {
 
 .tile {
   grid-column: span 1;
+  padding: 1.3em;
+  color: #E3E3E3;
+  box-sizing: border-box;
   grid-row: span 1;
   border-radius: 35px;
   background-color: #2D2D2D;
   height: 100%;
   width: 100%;
 }
+
+
+
+.topline {
+  font-size: 2.5rem;
+  margin: 0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.username {
+  font-family: "Space Grotesk";
+  font-weight: 300;
+  font-size: 1.5rem;
+  margin-top: 0;
+}
+
+.location {
+  font-family: "Montserrat";
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin-left: auto;
+}
+
+.pronouns {
+  font-family: "Montserrat";
+  font-weight: 400;
+  font-size: 1.5rem;
+}
+
 
 .tile:nth-child(1) {
   grid-column:  1 / 5;
