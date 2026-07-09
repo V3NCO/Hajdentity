@@ -267,6 +267,7 @@ async def provision(req: ProvisionRequest, current_user = Depends(get_current_ac
 async def add_haj(
   req: NewHajRequest = Depends(haj_from_form),
   image: UploadFile = File(...),
+  pfp: UploadFile = File(...),
   current_user = Depends(get_current_active_user)
 ):
   haj_id = uuid.uuid4()
@@ -314,17 +315,41 @@ async def add_haj(
       content_type=f"image/{ext}",
     )
 
+
+    try:
+      pfpimg = Image.open(pfp.file)
+      pfpimg.verify()
+      pfp.file.seek(0)
+      pfpext = pfpimg.format.lower() if pfpimg.format is not None else None
+      if pfpext not in ("jpeg", "png", "gif", "webp"):
+        raise HTTPException(status_code=400, detail="Unsupported image format")
+    except Exception:
+      raise HTTPException(status_code=400, detail="Invalid or corrupted image")
+
+    pfpcontents = await pfp.read()
+    pfpsize = len(pfpcontents)
+    if pfpsize > settings.max_image_size * 1024 * 1024:
+      raise HTTPException(status_code=400, detail="Image too large")
+
+    s3.put_object(
+      bucket_name=settings.s3.bucket,
+      object_name=f"pfp/{haj_id}",
+      data=BytesIO(pfpcontents),
+      length=pfpsize,
+      content_type=f"image/{pfpext}",
+    )
+
     chars = string.ascii_letters + string.digits + string.punctuation
     password = ''.join(secrets.choice(chars) for _ in range(secrets.randbelow(65) + 64))
 
     await client.post(
-      url=f"{settings.sharkey.base_url}/api/admin/accounts/create",
+      url=f"{settings.sharkey.base_url}api/admin/accounts/create",
       json={"username": req.username, "password": password},
       headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"}
     )
 
     i = await client.post(
-      url=f"{settings.sharkey.base_url}/api/signin-flow",
+      url=f"{settings.sharkey.base_url}api/signin-flow",
       json={
         "username": req.username,
         "password": password,
@@ -342,7 +367,7 @@ async def add_haj(
 
 
     tokenreq = await client.post(
-      url=f"{settings.sharkey.base_url}/api/miauth/gen-token",
+      url=f"{settings.sharkey.base_url}api/miauth/gen-token",
       json={
         "session":None,
         "name":"Hajdentity",
@@ -352,6 +377,78 @@ async def add_haj(
     )
 
     token = tokenreq.json()["token"]
+
+    image.file.seek(0)
+    pfp.file.seek(0)
+
+    pfpreq = await client.post(
+      url=f"{settings.sharkey.base_url}api/drive/files/create",
+      data = {"i": token, "force": True, "name": "pfp.png"},
+      files = {'file': ("pfp.png", pfp.file, "image/png")}
+    )
+
+    bannerreq = await client.post(
+      url=f"{settings.sharkey.base_url}api/drive/files/create",
+      data = {"i": token, "force": True, "name": "banner.png"},
+      files = {'file': ("banner.png", image.file, "image/png")}
+    )
+
+    parts = []
+    pronouns_gender = f"{req.pronouns} - {req.gender}" if req.pronouns and req.gender else (req.pronouns or req.gender or None)
+    if pronouns_gender:
+      parts.append(pronouns_gender)
+    parts.append(req.description)
+    if req.size:
+      parts.append(f"📏 {req.size}cm")
+    if req.floof:
+      floof_bar = '█' * req.floof + '░' * (10 - req.floof)
+      parts.append(f"Fluffiness | {floof_bar} | {req.floof}/10")
+    if req.squish:
+      squish_bar = '█' * req.squish + '░' * (10 - req.squish)
+      parts.append(f"Squishiness | {squish_bar} | {req.squish}/10")
+    if req.lastwashed:
+      parts.append(f"Last washed on {req.lastwashed.strftime('%c')}")
+    parts.append(f"---\n⚠️🦈 This account is automated via [Hajdentity]({settings.base_url}plush/{haj_id}))!🦈⚠️")
+
+    description_block = "\n\n".join(parts)
+
+    await client.post(
+      url=f"{settings.sharkey.base_url}api/i/update",
+      json={
+        "bannerId": bannerreq.json()["id"],
+        "avatarId": pfpreq.json()["id"],
+        "isLocked":False,
+        "autoAcceptFollowed":True,
+        "noCrawle":not req.public,
+        "preventAiLearning":True,
+        "noindex": not req.public,
+        "enableRss":req.public,
+        "isExplorable":req.public,
+        "requireSigninToViewContents": not req.public,
+        "makeNotesFollowersOnlyBefore":None if req.public else 1,
+        "makeNotesHiddenBefore":None if req.public else 0,
+        "hideOnlineStatus":True,
+        "publicReactions": req.public,
+        "followingVisibility":"public" if req.public else "private",
+        "followersVisibility":"public" if req.public else "private",
+        "chatScope":"mutual" if req.public else "none",
+        "allowUnsignedFetch":"staff",
+        "isBot": True,
+        "isCat": False,
+        "birthday": req.date.strftime("%Y-%m-%d"),
+        "location": req.location,
+        "name": req.displayname,
+        "attributionDomains": [settings.base_url.host],
+        "description": description_block
+      },
+      headers={"Authorization": f"Bearer {token}"}
+    )
+
+    await client.post(
+      url=f"{settings.sharkey.base_url}api/i/registry/set",
+      json={"scope":["client","base"],"key":"accountSetupWizard","value":-1},
+      headers={"Authorization": f"Bearer {userauth}"}
+    )
 
     nonce=get_random_bytes(12)
     cipher = AES.new(bytes.fromhex(settings.token_enc), AES.MODE_GCM, nonce=nonce)
@@ -366,15 +463,16 @@ async def add_haj(
     ).save()
 
     return {"status": "ok", "uuid": str(haj_id)}
-  except Exception:
+  except Exception as e:
     await HajInfo.delete().where(HajInfo.uuid == haj_id)
     s3.remove_object(settings.s3.bucket, f"hajs/{haj_id}")
     if i is not None:
       await client.post(
-        url=f"{settings.sharkey.base_url}/api/admin/delete-account",
+        url=f"{settings.sharkey.base_url}api/admin/delete-account",
         json={"userId":i.json()["id"]},
         headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"}
       )
+    print(e)
     raise HTTPException(status_code=500, detail="Something went wrong, try again later.")
 
 @api.get('/haj/list', response_model=HajListResponse, tags=["Haj"])

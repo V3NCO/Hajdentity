@@ -233,6 +233,8 @@ export interface components {
         Body_add_haj_api_haj_create_post: {
             /** Image */
             image: string;
+            /** Pfp */
+            pfp: string;
             /** Displayname */
             displayname: string;
             /** Username */

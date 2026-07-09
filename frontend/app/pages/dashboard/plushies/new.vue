@@ -5,6 +5,10 @@ const fileError = ref('')
 const preview = ref('')
 const dragging = ref(false)
 const fileInput = ref<HTMLInputElement>()
+const pfpFileError = ref('')
+const pfpPreview = ref('')
+const pfpDragging = ref(false)
+const pfpFileInput = ref<HTMLInputElement>()
 const submitting = ref(false)
 import cardsCss from '~/assets/css/cards.css?raw'
 
@@ -59,9 +63,42 @@ function getFile(file: File) {
   img.src = preview.value
 }
 
+function getPfpFile(file: File) {
+  pfpFileError.value = ''
+
+  if (file.size > 10 * 1024 * 1024) {
+    pfpFileError.value = 'Max 10MB'
+    pfpPreview.value = ''
+    return
+  }
+
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowed.includes(file.type)) {
+    pfpFileError.value = 'JPEG, PNG, WebP, or GIF only'
+    pfpPreview.value = ''
+    return
+  }
+
+  const img = new Image()
+  pfpPreview.value = URL.createObjectURL(file)
+  img.onload = () => {
+    if (img.naturalWidth !== img.naturalHeight) {
+      pfpFileError.value = 'Must be 1:1 square aspect ratio'
+      pfpPreview.value = ''
+      return
+    }
+  }
+  img.src = pfpPreview.value
+}
+
 function onFileChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (file) getFile(file)
+}
+
+function onPfpFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) getPfpFile(file)
 }
 
 function onDragOver(e: DragEvent) {
@@ -84,6 +121,26 @@ function onDrop(e: DragEvent) {
   getFile(file)
 }
 
+function onPfpDragOver(e: DragEvent) {
+  e.preventDefault()
+  pfpDragging.value = true
+}
+
+function onPfpDragLeave() {
+  pfpDragging.value = false
+}
+
+function onPfpDrop(e: DragEvent) {
+  e.preventDefault()
+  pfpDragging.value = false
+  const file = e.dataTransfer?.files?.[0]
+  if (!file) return
+  const dt = new DataTransfer()
+  dt.items.add(file)
+  if (pfpFileInput.value) pfpFileInput.value.files = dt.files
+  getPfpFile(file)
+}
+
 async function onSubmit() {
   const file = fileInput.value?.files?.[0]
   if (!file) {
@@ -91,11 +148,19 @@ async function onSubmit() {
     return
   }
 
+  const pfpFile = pfpFileInput.value?.files?.[0]
+  if (!pfpFile) {
+    pfpFileError.value = 'Profile picture is required'
+    return
+  }
+
   submitting.value = true
   fileError.value = ''
+  pfpFileError.value = ''
 
   const form = new FormData()
   form.append('image', file)
+  form.append('pfp', pfpFile)
   for (const [key, val] of Object.entries(state)) {
     if (val !== undefined && val !== '') form.append(key, String(val))
   }
@@ -296,10 +361,33 @@ async function onSubmit() {
           required
         />
         <label for="image">Click or Drag here</label>
-        <p class="imgrec">(Max 10MB, PNG, JPEG, WEBP and GIF supported, 4:3 recommended)</p>
+        <p class="imgrec">(Max 10MB, PNG, JPEG, WEBP and GIF supported, 4:3 or 1:2 recommended)</p>
         <span class="file-error" v-if="fileError">{{ fileError }}</span>
       </div>
 
+      <h2 style="margin: 0.25em;"><span style="color: dimgrey; font-weight: 300;">3.</span> Upload a pfp for your companion :3</h2>
+
+      <div
+        class="field file-field"
+        :class="{ dragging: pfpDragging }"
+        @dragenter.prevent="pfpDragging = true"
+        @dragover="onPfpDragOver"
+        @dragleave="onPfpDragLeave"
+        @drop="onPfpDrop"
+      >
+        <input
+          ref="pfpFileInput"
+          id="pfp"
+          name="pfp"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          @change="onPfpFileChange"
+          required
+        />
+        <label for="pfp">Click or Drag here</label>
+        <p class="imgrec">(Max 10MB, 1:1 square aspect ratio required for profile pic)</p>
+        <span class="file-error" v-if="pfpFileError">{{ pfpFileError }}</span>
+      </div>
 
       <button type="submit">Submit</button>
     </form>
