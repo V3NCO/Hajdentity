@@ -55,24 +55,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/haj/create": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Add Haj */
-        post: operations["add_haj_api_haj_create_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/haj/list": {
+    "/api/hajs": {
         parameters: {
             query?: never;
             header?: never;
@@ -80,16 +63,17 @@ export interface paths {
             cookie?: never;
         };
         /** List Hajs */
-        get: operations["list_hajs_api_haj_list_get"];
+        get: operations["list_hajs_api_hajs_get"];
         put?: never;
-        post?: never;
+        /** Add Haj */
+        post: operations["add_haj_api_hajs_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/haj/info/{haj_id}": {
+    "/api/hajs/{haj_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -97,7 +81,7 @@ export interface paths {
             cookie?: never;
         };
         /** Haj Info */
-        get: operations["haj_info_api_haj_info__haj_id__get"];
+        get: operations["haj_info_api_hajs__haj_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -106,7 +90,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/haj/image/{haj_id}": {
+    "/api/hajs/{haj_id}/image": {
         parameters: {
             query?: never;
             header?: never;
@@ -114,7 +98,24 @@ export interface paths {
             cookie?: never;
         };
         /** Get Haj Image */
-        get: operations["get_haj_image_api_haj_image__haj_id__get"];
+        get: operations["get_haj_image_api_hajs__haj_id__image_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hajs/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Haj Posts */
+        get: operations["get_haj_posts_api_hajs_posts_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -229,8 +230,8 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Body_add_haj_api_haj_create_post */
-        Body_add_haj_api_haj_create_post: {
+        /** Body_add_haj_api_hajs_post */
+        Body_add_haj_api_hajs_post: {
             /** Image */
             image: string;
             /** Pfp */
@@ -366,6 +367,10 @@ export interface components {
             /** Status */
             status: string;
             haj: components["schemas"]["HajItem"];
+            /** Sharkey */
+            sharkey?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** NewTokenRequest */
         NewTokenRequest: {
@@ -517,7 +522,27 @@ export interface operations {
             };
         };
     };
-    add_haj_api_haj_create_post: {
+    list_hajs_api_hajs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HajListResponse"];
+                };
+            };
+        };
+    };
+    add_haj_api_hajs_post: {
         parameters: {
             query?: {
                 public?: boolean;
@@ -528,7 +553,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_add_haj_api_haj_create_post"];
+                "multipart/form-data": components["schemas"]["Body_add_haj_api_hajs_post"];
             };
         };
         responses: {
@@ -552,27 +577,7 @@ export interface operations {
             };
         };
     };
-    list_hajs_api_haj_list_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HajListResponse"];
-                };
-            };
-        };
-    };
-    haj_info_api_haj_info__haj_id__get: {
+    haj_info_api_hajs__haj_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -603,13 +608,44 @@ export interface operations {
             };
         };
     };
-    get_haj_image_api_haj_image__haj_id__get: {
+    get_haj_image_api_hajs__haj_id__image_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 haj_id: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_haj_posts_api_hajs_posts_get: {
+        parameters: {
+            query: {
+                haj_id: string;
+            };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

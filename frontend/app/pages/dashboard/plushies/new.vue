@@ -166,7 +166,7 @@ async function onSubmit() {
   }
 
   try {
-    const res = await $fetch('/api/haj/create', {
+    const res = await $fetch('/api/hajs', {
       method: 'POST',
       body: form,
       credentials: 'include'

@@ -20,7 +20,7 @@ const loading = ref(true)
 const data = ref()
 const error = ref()
 onMounted(async () => {
-  const { data: plushies, error: err } = await api.GET('/api/haj/list')
+  const { data: plushies, error: err } = await api.GET('/api/hajs')
   data.value = plushies
   error.value = err
   loading.value = false
@@ -41,7 +41,7 @@ onMounted(async () => {
       <p>Add plushie</p>
     </a>
     <a
-      :style="{ backgroundImage: `url(/api/haj/image/${plush.uuid})` }"
+      :style="{ backgroundImage: `url(/api/hajs/${plush.uuid}/image)` }"
       v-for="plush in data?.hajs"
       :key="plush.uuid"
       class="card"

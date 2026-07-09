@@ -12,7 +12,7 @@ from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from Crypto.Random import get_random_bytes
 import base64
-from helpers import diversify_key
+from helpers import diversify_key, decrypt_token
 from config import settings, mail, s3
 from PIL import Image
 from io import BytesIO
@@ -26,7 +26,7 @@ from auth import (
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import StreamingResponse
 from scalar_fastapi import get_scalar_api_reference
-from typing import Annotated
+from typing import Annotated, Any
 from pydantic import Field, field_validator
 from emails import verify_mail_template
 
@@ -94,6 +94,7 @@ class HajListResponse(BaseModel):
 class HajResponse(BaseModel):
   status: str
   haj: HajItem
+  sharkey: dict[str, Any] | None = None
 
 class NewHajRequest(BaseModel):
   username: Annotated[str, Field(pattern=r"^[a-z0-9_-]{3,48}$")]
@@ -266,7 +267,7 @@ async def provision(req: ProvisionRequest, current_user = Depends(get_current_ac
     raise HTTPException(401, "This blahaj is either not yours or doesn't exist.")
 
 
-@api.post('/haj/create', tags=["Haj"])
+@api.post('/hajs', tags=["Haj"])
 async def add_haj(
   req: NewHajRequest = Depends(haj_from_form),
   image: UploadFile = File(...),
@@ -278,22 +279,8 @@ async def add_haj(
   try:
     if await HajInfo.exists().where(HajInfo.username == req.username):
       raise HTTPException(status_code=400, detail="Username taken")
-    await HajInfo(
-      uuid=haj_id,
-      human=current_user.id,
-      displayname=req.displayname,
-      username=req.username,
-      date=req.date,
-      size = req.size,
-      location = req.location,
-      description = req.description,
-      pronouns = req.pronouns,
-      gender = req.gender,
-      floof = req.floof,
-      squish = req.squish,
-      lastwashed = req.lastwashed,
-      mloftearsabsorbed= req.mloftearsabsorbed,
-      public=req.public
+    await HajInfo( uuid=haj_id, human=current_user.id, displayname=req.displayname, username=req.username, date=req.date, size = req.size, location = req.location,
+      description = req.description, pronouns = req.pronouns, gender = req.gender, floof = req.floof, squish = req.squish, lastwashed = req.lastwashed, mloftearsabsorbed= req.mloftearsabsorbed, public=req.public
     ).save()
     try:
       img = Image.open(image.file)
@@ -310,13 +297,7 @@ async def add_haj(
     if size > settings.max_image_size * 1024 * 1024:
       raise HTTPException(status_code=400, detail="Image too large")
 
-    s3.put_object(
-      bucket_name=settings.s3.bucket,
-      object_name=f"hajs/{haj_id}",
-      data=BytesIO(contents),
-      length=size,
-      content_type=f"image/{ext}",
-    )
+    s3.put_object(bucket_name=settings.s3.bucket,object_name=f"hajs/{haj_id}", data=BytesIO(contents), length=size, content_type=f"image/{ext}")
 
 
     try:
@@ -356,12 +337,7 @@ async def add_haj(
       json={
         "username": req.username,
         "password": password,
-        "frc-captcha-solution": None,
-        "hcaptcha-response": None,
-        "g-recaptcha-response": None,
-        "m-captcha-response": None,
-        "turnstile-response": None,
-        "testcaptcha-response": None
+        "frc-captcha-solution": None, "hcaptcha-response": None, "g-recaptcha-response": None, "m-captcha-response": None, "turnstile-response": None, "testcaptcha-response": None
       }
     )
 
@@ -380,21 +356,11 @@ async def add_haj(
     )
 
     token = tokenreq.json()["token"]
-
     image.file.seek(0)
     pfp.file.seek(0)
 
-    pfpreq = await client.post(
-      url=f"{settings.sharkey.base_url}api/drive/files/create",
-      data = {"i": token, "force": True, "name": "pfp.png"},
-      files = {'file': ("pfp.png", pfp.file, "image/png")}
-    )
-
-    bannerreq = await client.post(
-      url=f"{settings.sharkey.base_url}api/drive/files/create",
-      data = {"i": token, "force": True, "name": "banner.png"},
-      files = {'file': ("banner.png", image.file, "image/png")}
-    )
+    pfpreq = await client.post(url=f"{settings.sharkey.base_url}api/drive/files/create", data = {"i": token, "force": True, "name": "pfp.png"}, files = {'file': ("pfp.png", pfp.file, "image/png")})
+    bannerreq = await client.post(url=f"{settings.sharkey.base_url}api/drive/files/create", data = {"i": token, "force": True, "name": "banner.png"}, files = {'file': ("banner.png", image.file, "image/png")})
 
     parts = []
     pronouns_gender = f"{req.pronouns} - {req.gender}" if req.pronouns and req.gender else (req.pronouns or req.gender or None)
@@ -418,31 +384,19 @@ async def add_haj(
     await client.post(
       url=f"{settings.sharkey.base_url}api/i/update",
       json={
-        "bannerId": bannerreq.json()["id"],
-        "avatarId": pfpreq.json()["id"],
-        "isLocked":False,
-        "autoAcceptFollowed":True,
-        "noCrawle":not req.public,
-        "preventAiLearning":True,
-        "noindex": not req.public,
-        "enableRss":req.public,
-        "isExplorable":req.public,
-        "requireSigninToViewContents": not req.public,
-        "makeNotesFollowersOnlyBefore":None if req.public else 1,
-        "makeNotesHiddenBefore":None if req.public else 0,
-        "hideOnlineStatus":True,
-        "publicReactions": req.public,
-        "followingVisibility":"public" if req.public else "private",
-        "followersVisibility":"public" if req.public else "private",
+        "bannerId": bannerreq.json()["id"], "avatarId": pfpreq.json()["id"],
+        "noCrawle":not req.public, "noindex": not req.public, "requireSigninToViewContents": not req.public,
+        "enableRss":req.public, "isExplorable":req.public, "publicReactions": req.public,
+        "makeNotesFollowersOnlyBefore":None if req.public else 1, "makeNotesHiddenBefore":None if req.public else 0,
+        "followingVisibility":"public" if req.public else "private", "followersVisibility":"public" if req.public else "private",
         "chatScope":"mutual" if req.public else "none",
-        "allowUnsignedFetch":"staff",
-        "isBot": True,
-        "isCat": False,
-        "birthday": req.date.strftime("%Y-%m-%d"),
-        "location": req.location,
-        "name": req.displayname,
+        "name": req.displayname, "birthday": req.date.strftime("%Y-%m-%d"), "location": req.location, "description": description_block,
         "attributionDomains": [settings.base_url.host],
-        "description": description_block
+        "autoAcceptFollowed":True,
+        "preventAiLearning":True,
+        "hideOnlineStatus":True,
+        "isBot": True,
+        "isCat": False
       },
       headers={"Authorization": f"Bearer {token}"}
     )
@@ -478,7 +432,7 @@ async def add_haj(
     print(e)
     raise HTTPException(status_code=500, detail="Something went wrong, try again later.")
 
-@api.get('/haj/list', response_model=HajListResponse, tags=["Haj"])
+@api.get('/hajs', response_model=HajListResponse, tags=["Haj"])
 async def list_hajs(
   current_user = Depends(get_current_active_user)
 ):
@@ -490,15 +444,27 @@ async def list_hajs(
   ).where(HajInfo.human == current_user.id)
   return {"status": "ok", "hajs": hajs}
 
-@api.get('/haj/info/{haj_id}', response_model=HajResponse, tags=["Haj"])
+@api.get('/hajs/{haj_id}', response_model=HajResponse, tags=["Haj"])
 async def haj_info(haj_id: UUID4, current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   if await check_haj_perm(user_id, haj_id):
     haj = await HajInfo.select().where(HajInfo.uuid == haj_id).first()
+    token_in_db = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == haj_id).first()
+    if token_in_db is not None and haj is not None:
+      try:
+        token = decrypt_token(token_in_db["sharkey_key"])
+        sharkey_user = await client.post(
+          f"{settings.sharkey.base_url}api/users/show",
+          json={'username': haj["username"]},
+          headers={'Authorization': token}
+        )
+        return {"status": "ok", "haj": haj, "sharkey": sharkey_user.json()}
+      except Exception:
+        return {"status": "ok", "haj": haj}
     return {"status": "ok", "haj": haj}
   raise HTTPException(status_code=403, detail="Not authorized")
 
-@api.get('/haj/image/{haj_id}', tags=["Haj"])
+@api.get('/hajs/{haj_id}/image', tags=["Haj"])
 async def get_haj_image(haj_id: UUID4, current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   if await check_haj_perm(user_id, haj_id):
