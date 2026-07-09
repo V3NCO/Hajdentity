@@ -402,12 +402,12 @@ async def add_haj(
       parts.append(f"📏 {req.size}cm")
     if req.floof:
       floof_bar = '█' * req.floof + '░' * (10 - req.floof)
-      parts.append(f"Fluffiness | {floof_bar} | {req.floof}/10")
+      parts.append(f"☁️ Fluffiness | {floof_bar} | {req.floof}/10")
     if req.squish:
       squish_bar = '█' * req.squish + '░' * (10 - req.squish)
-      parts.append(f"Squishiness | {squish_bar} | {req.squish}/10")
+      parts.append(f"🧸 Squishiness | {squish_bar} | {req.squish}/10")
     if req.lastwashed:
-      parts.append(f"Last washed on {req.lastwashed.strftime('%c')}")
+      parts.append(f"🧽 Last washed on {req.lastwashed.strftime('%c')}")
     parts.append(f"---\n⚠️🦈 This account is automated via [Hajdentity]({settings.base_url}plush/{haj_id}))!🦈⚠️")
 
     description_block = "\n\n".join(parts)
