@@ -227,6 +227,9 @@ async def nfc_auth(tap: NfcRequest):
   if tap.cmac.upper() != calculated_mac_hex:
       raise HTTPException(status_code=400, detail="CMAC invalid")
 
+  await tag.update({NFCTable.last_counter: counter})
+
+  return {'status': 'ok', 'haj': tag.haj_id}
 
 @api.post('/nfc/provision', tags=["NFC"])
 async def provision(req: ProvisionRequest, current_user = Depends(get_current_active_user)):
