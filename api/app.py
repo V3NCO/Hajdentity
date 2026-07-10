@@ -300,7 +300,7 @@ async def nfc_auth(response: Response, request: Request, tap: NfcRequest):
   session_id = await create_nfc_session(str(tag.haj_id), request)
   set_nfc_cookie(response, str(tag.haj_id), session_id)
 
-  await tag.update({NFCTable.last_counter: counter})
+  await tag.update_self({NFCTable.last_counter: counter})
 
   return {'status': 'ok', 'haj': tag.haj_id}
 
@@ -584,7 +584,7 @@ async def patch_haj(
       if value is not None
     }
     if update_data:
-      await haj.update(**update_data)
+      await haj.update_self(**update_data)
     if image is not None:
       try:
         img = Image.open(image.file)
