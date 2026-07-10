@@ -573,7 +573,7 @@ async def make_post(haj_id: UUID4, req: NewPostRequest = Depends(post_from_form)
 async def get_posts(haj_id: UUID4, current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   if await check_haj_perm(user_id, haj_id):
-    posts = await Posts.select().where(Posts.haj == haj_id)
+    posts = await Posts.select().where(Posts.haj == haj_id).order_by(Posts.created_at, ascending=False)
     return {"status": "ok", "posts": posts}
   raise HTTPException(status_code=403, detail="Not authorized")
 

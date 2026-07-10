@@ -1,5 +1,7 @@
 <script setup lang="ts">
   import '~/assets/css/fonts.css'
+  import loadingCss from '~/assets/css/loading.css?raw'
+  import { useApi } from '~/lib/api'
 
   function formatCompactNumber(number: number) {
     if (number < 1000) {
@@ -13,48 +15,56 @@
     }
   }
 
-  const displayName = "Raine";
-  const username = "raine";
-  const pronouns = "they/them";
-  const location = "France";
-  const description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin imperdiet ultricies risus vitae pellentesque. Morbi porta, nisl nec viverra  aliquet, eros mauris rutrum magna,";
+  useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: loadingCss }] })
+  const api = useApi()
+  const route = useRoute()
+
+  const loading = ref(true)
+
+  const plushdata = ref()
+  const postdata = ref()
+  const sharkeydata = ref()
+  const plusherror = ref()
+  const postserror = ref()
+
+  onMounted(async () => {
+    const { data: hajData, error: err } = await api.GET(
+      '/api/hajs/{haj_id}',
+      { params: { path: { haj_id: route.params.id as string } } }
+    )
+    const { data: postsData, error: err2 } = await api.GET(
+      '/api/hajs/{haj_id}/posts',
+      { params: { path: { haj_id: route.params.id as string } } }
+    )
+    plushdata.value = hajData?.haj
+    postdata.value = postsData?.posts
+    sharkeydata.value = hajData?.sharkey
+    plusherror.value = err
+    postserror.value = err2
+    loading.value = false
+  })
+
   const likes = 13292;
   const views = 4343333;
-  const postscount = 1;
-  const followers = 132;
-
-  const posts= [
-      {
-        "id": "8d1a30f8-b274-403e-b8b1-4b5583e34ef1",
-        "haj": "6ebbaa39-f10f-44cc-9647-6874790020dc",
-        "sharkey_id": "aohs04ck0q4f009b",
-        "sharkey_file": "aohs04750q4f009a",
-        "text": "My first automated post",
-        "cw": null,
-        "created_at": "2026-07-10T00:42:56.901517+00:00"
-      },
-      {
-        "id": "d1b4889a-00b3-4287-bb66-c264586c21a5",
-        "haj": "6ebbaa39-f10f-44cc-9647-6874790020dc",
-        "sharkey_id": "aohs7gdv0q4f009g",
-        "sharkey_file": "aohs7g8k0q4f009f",
-        "text": "My first automated post",
-        "cw": "City",
-        "created_at": "2026-07-10T00:48:39.098907+00:00"
-      }
-    ]
 </script>
 
 <template>
-<div class="bento">
+<Transition><div v-if="loading" class="loading">
+  <h1>Loading...</h1>
+  <video autoplay loop muted playsinline>
+    <source src="/blahaj.webm" type="video/webm">
+  </video>
+</div></Transition>
+
+<div class="bento" v-if="!loading">
   <div class="tile">
-    <h1 class="topline">{{displayName}} <span class="pronouns">{{pronouns}}</span> <span class="location">📍 {{location}}</span></h1>
-    <h2 class="username">@{{username}}</h2>
-    <p>{{description}}</p>
+    <h1 class="topline">{{plushdata.displayname}} <span class="pronouns">{{plushdata.pronouns}}</span> <span class="location">📍 {{plushdata.location}}</span></h1>
+    <h2 class="username">@{{plushdata.username}}</h2>
+    <p>{{plushdata.description}}</p>
   </div>
-  <div class="tile" :style="{ backgroundImage: `url(/api/hajs/${posts[0]?.haj}/posts/${posts[0]?.id}/image)` }">
+  <div class="tile" :style="{ backgroundImage: `url(/api/hajs/${postdata[0]?.haj}/posts/${postdata[0]?.id}/image)` }">
     <h1>Latest post:</h1>
-    <h2>{{posts[0]?.text}}</h2>
+    <h2>{{postdata[0]?.text}}</h2>
   </div>
   <div class="tile">
     <div class="stat">
@@ -67,11 +77,11 @@
     </div>
     <div class="stat">
       <h2>Posts</h2>
-      <h1 style="background-image: radial-gradient(circle at top left, #0D76FF 0, #084799 100%);">{{formatCompactNumber(postscount)}}</h1>
+      <h1 style="background-image: radial-gradient(circle at top left, #0D76FF 0, #084799 100%);">{{formatCompactNumber(sharkeydata.notesCount)}}</h1>
     </div>
     <div class="stat">
       <h2>Followers</h2>
-      <h1 style="background-image: radial-gradient(circle at top left, #AD41FF 0, #682799 100%);">{{formatCompactNumber(followers)}}</h1>
+      <h1 style="background-image: radial-gradient(circle at top left, #AD41FF 0, #682799 100%);">{{formatCompactNumber(sharkeydata.followersCount)}}</h1>
     </div>
   </div>
   <div class="tile"></div>
@@ -204,7 +214,6 @@ body {
   font-weight: 400;
   position: relative;
   background-size: cover;
-  background-clip: 
 }
 
 .tile:nth-child(2) h1 {
