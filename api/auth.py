@@ -68,7 +68,8 @@ async def create_session(user_id: str, request: Request) -> str:
   now = datetime.now(timezone.utc)
   await Sessions.insert(Sessions(
     id=uuid.uuid4(),
-    user_id=user_id,
+    type="user",
+    associated=user_id,
     session_id=session_id,
     created_at=now,
     last_seen_at=now,
@@ -101,8 +102,8 @@ async def touch_session(session_id: str):
   )
 
 
-async def validate_session(session_id: str) -> UserInDB | None:
-    session_row = await Sessions.select().where(Sessions.session_id == session_id).first()
+async def validate_user_session(session_id: str) -> UserInDB | None:
+    session_row = await Sessions.select().where(Sessions.session_id == session_id and Sessions.type == "user").first()
     if not session_row:
       return None
 
@@ -114,7 +115,7 @@ async def validate_session(session_id: str) -> UserInDB | None:
       await Sessions.delete().where(Sessions.id == session_row["id"])
       return None
 
-    user_dict = await Humans.select().where(Humans.id == session_row["user_id"]).first()
+    user_dict = await Humans.select().where(Humans.id == session_row["associated"]).first()
     if not user_dict:
       return None
 

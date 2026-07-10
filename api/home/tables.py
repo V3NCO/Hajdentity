@@ -57,7 +57,8 @@ class Humans(Table):
 
 class Sessions(Table):
   id = UUID(primary_key=True, null=False)
-  user_id = UUID(null=False)
+  type = Varchar(length=64, null=False)
+  associated = UUID(null=False)
   session_id = Varchar(length=64, unique=True, null=False, index=True)
   created_at = Timestamptz(null=False)
   last_seen_at = Timestamptz(null=False)
