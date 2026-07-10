@@ -15,6 +15,23 @@
     }
   }
 
+  function timeAgo(dateStr: string) {
+    const now = new Date()
+    const d = new Date(dateStr)
+    const diff = now.getTime() - d.getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return mins + 'm ago'
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return hrs + 'h ago'
+    const days = Math.floor(hrs / 24)
+    if (days < 30) return days + 'd ago'
+    const months = Math.floor(days / 30)
+    if (months < 12) return months + 'mo ago'
+    const years = Math.floor(months / 12)
+    return years + 'y ago'
+  }
+
   useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: loadingCss }] })
   const api = useApi()
   const route = useRoute()
@@ -68,12 +85,10 @@
   </div>
   <div class="tile">
     <div class="stat">
-      <h2>Likes</h2>
-      <h1 style="background-image: radial-gradient(circle at top left, #FF4043 0, #992628 100%);">{{formatCompactNumber(likes)}}</h1>
+      <h2>Friends</h2>
     </div>
     <div class="stat">
-      <h2>Views</h2>
-      <h1 style="background-image: radial-gradient(circle at top left, #6CFF82 0, #41994E 100%);">{{formatCompactNumber(views)}}</h1>
+      <h2>Badges</h2>
     </div>
     <div class="stat">
       <h2>Posts</h2>
@@ -94,9 +109,29 @@
     <h2>Gender</h2>
     <h3>{{plushdata.gender}}</h3>
   </div>
-  <div class="tile"></div>
-  <div class="tile"></div>
-  <div class="tile"></div>
+  <div class="tile stat-pair">
+    <span>Fluffiness</span>
+    <div v-if="plushdata.floof != null" class="pair-row">
+      <div class="pair-bar">
+        <div class="pair-fill" :style="{ width: (plushdata.floof / 10 * 100) + '%' }"></div>
+      </div>
+      <span>{{plushdata.floof}}/10</span>
+    </div>
+    <span>Squish</span>
+    <div v-if="plushdata.squish != null" class="pair-row">
+      <div class="pair-bar">
+        <div class="pair-fill" :style="{ width: (plushdata.squish / 10 * 100) + '%' }"></div>
+      </div>
+      <span>{{plushdata.squish}}/10</span>
+    </div>
+  </div>
+  <div class="tile stat-pair">
+    <span>Adopted on:</span>
+    <span>{{plushdata.date}}</span>
+    <span v-if="plushdata.lastwashed != null">Last washed:</span>
+    <span v-if="plushdata.lastwashed != null">{{timeAgo(plushdata.lastwashed)}}</span>
+  </div>
+  <div class="tile" v-if="plushdata.mloftearsabsorbed != null"></div>
 </div>
 </template>
 
@@ -289,5 +324,35 @@ body {
 .tile:nth-child(9) {
   grid-column:  6;
   grid-row: 5;
+}
+
+.stat-pair {
+  display: grid;
+  flex-direction: column;
+  padding: 1em 1.3em;
+  gap: 0.6em;
+  font-size: 1.1em;
+  font-weight: 500;
+}
+
+.pair-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.pair-bar {
+  flex: 1;
+  height: 1.2em;
+  border-radius: 0.35em;
+  background-color: #4A4A4A;
+  overflow: hidden;
+}
+
+.pair-fill {
+  height: 100%;
+  border-radius: 0.35em;
+  background: linear-gradient(90deg, #B088D6, #8B5CF6);
+  transition: width 0.3s;
 }
 </style>

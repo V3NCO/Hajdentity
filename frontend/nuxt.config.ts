@@ -10,6 +10,16 @@ export default defineNuxtConfig({
     }
   },
 
+  vite: {
+    optimizeDeps: {
+      include: [
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+        'openapi-fetch',
+      ]
+    }
+  },
+
   routeRules: {
     '/api/**': {
       proxy: "http://127.0.0.1:8000/api/**"
