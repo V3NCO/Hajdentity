@@ -1,4 +1,4 @@
-from pydantic import AfterValidator, EmailStr, Field, HttpUrl, SecretStr
+from pydantic import BeforeValidator, EmailStr, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Annotated
 from fastapi_mail import FastMail, ConnectionConfig
@@ -6,31 +6,31 @@ import minio
 
 def hex_to_bytes(v: str | bytes) -> bytes:
     if isinstance(v, bytes):
-        return v
+      return v
     try:
-        return bytes.fromhex(v)
+      return bytes.fromhex(v)
     except ValueError:
-        raise ValueError("Must be a valid hexadecimal string")
+      raise ValueError("Must be a valid hexadecimal string")
 
 def ascii_encode(v: str) -> bytes:
     if isinstance(v, bytes):
-        return v
+      return v
     try:
-        return v.encode("ASCII")
+      return v.encode("ASCII")
     except ValueError:
-        raise ValueError("System ID must have ASCII character, make it more basic")
+      raise ValueError("System ID must have ASCII character, make it more basic")
 
 MKeyStr = Annotated[str, Field(min_length=32, max_length=32)]
-MasterKey = Annotated[bytes, AfterValidator(hex_to_bytes), MKeyStr]
+MasterKey = Annotated[bytes, BeforeValidator(hex_to_bytes), MKeyStr]
 
 DesAIDStr = Annotated[str, Field(min_length=6, max_length=6)]
-DesfireAID = Annotated[bytes, AfterValidator(hex_to_bytes), DesAIDStr]
+DesfireAID = Annotated[bytes, BeforeValidator(hex_to_bytes), DesAIDStr]
 
 SystemIDStr = Annotated[str, Field(max_length=32)]
-SystemID = Annotated[bytes, AfterValidator(ascii_encode), SystemIDStr]
+SystemID = Annotated[bytes, BeforeValidator(ascii_encode), SystemIDStr]
 
 Key3Str = Annotated[str, Field(min_length=32, max_length=32)]
-Key3 = Annotated[bytes, AfterValidator(hex_to_bytes), Key3Str]
+Key3 = Annotated[bytes, BeforeValidator(hex_to_bytes), Key3Str]
 
 class MailSettings(BaseSettings):
     username: str = "default"
@@ -90,7 +90,6 @@ class Settings(BaseSettings):
     sharkey: SharkeySettings = SharkeySettings()
 
 settings = Settings()  # type: ignore[reportCallIssue]
-
 
 mail_config = ConnectionConfig(
     MAIL_USERNAME=settings.mail.username,
