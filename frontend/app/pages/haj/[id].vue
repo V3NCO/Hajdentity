@@ -20,8 +20,29 @@
   const description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin imperdiet ultricies risus vitae pellentesque. Morbi porta, nisl nec viverra  aliquet, eros mauris rutrum magna,";
   const likes = 13292;
   const views = 4343333;
-  const posts = 1;
+  const postscount = 1;
   const followers = 132;
+
+  const posts= [
+      {
+        "id": "8d1a30f8-b274-403e-b8b1-4b5583e34ef1",
+        "haj": "6ebbaa39-f10f-44cc-9647-6874790020dc",
+        "sharkey_id": "aohs04ck0q4f009b",
+        "sharkey_file": "aohs04750q4f009a",
+        "text": "My first automated post",
+        "cw": null,
+        "created_at": "2026-07-10T00:42:56.901517+00:00"
+      },
+      {
+        "id": "d1b4889a-00b3-4287-bb66-c264586c21a5",
+        "haj": "6ebbaa39-f10f-44cc-9647-6874790020dc",
+        "sharkey_id": "aohs7gdv0q4f009g",
+        "sharkey_file": "aohs7g8k0q4f009f",
+        "text": "My first automated post",
+        "cw": "City",
+        "created_at": "2026-07-10T00:48:39.098907+00:00"
+      }
+    ]
 </script>
 
 <template>
@@ -31,7 +52,10 @@
     <h2 class="username">@{{username}}</h2>
     <p>{{description}}</p>
   </div>
-  <div class="tile"></div>
+  <div class="tile" :style="{ backgroundImage: `url(/api/hajs/${posts[0]?.haj}/posts/${posts[0]?.id}/image)` }">
+    <h1>Latest post:</h1>
+    <h2>{{posts[0]?.text}}</h2>
+  </div>
   <div class="tile">
     <div class="stat">
       <h2>Likes</h2>
@@ -43,7 +67,7 @@
     </div>
     <div class="stat">
       <h2>Posts</h2>
-      <h1 style="background-image: radial-gradient(circle at top left, #0D76FF 0, #084799 100%);">{{formatCompactNumber(posts)}}</h1>
+      <h1 style="background-image: radial-gradient(circle at top left, #0D76FF 0, #084799 100%);">{{formatCompactNumber(postscount)}}</h1>
     </div>
     <div class="stat">
       <h2>Followers</h2>
@@ -176,6 +200,25 @@ body {
 .tile:nth-child(2) {
   grid-column:  5 / 8;
   grid-row: 1 / 4;
+  font-family: "Oswald";
+  font-weight: 400;
+  position: relative;
+  background-size: cover;
+  background-clip: 
+}
+
+.tile:nth-child(2) h1 {
+  margin: 0.25em;
+  font-family: "Oswald";
+  font-weight: 400;
+}
+
+.tile:nth-child(2) h2 {
+  margin: 0.25em;
+  font-family: "Oswald";
+  font-weight: 400;
+  position: absolute;
+  bottom: 1.3rem;
 }
 
 .tile:nth-child(3) {
@@ -186,7 +229,7 @@ body {
   grid-template-rows: 1fr 1fr;
   background-color: #212121;
   padding: 0;
-  gap: 1em
+  gap: 1em;
 }
 
 /* PFP in middle */
