@@ -131,7 +131,10 @@
     <span v-if="plushdata.lastwashed != null">Last washed:</span>
     <span v-if="plushdata.lastwashed != null">{{timeAgo(plushdata.lastwashed)}}</span>
   </div>
-  <div class="tile" v-if="plushdata.mloftearsabsorbed != null"></div>
+  <div class="tile" v-if="plushdata.mloftearsabsorbed != null">
+    <h2>mL of tears absorbed:</h2>
+    <h1 style="background-image: radial-gradient(circle at top left, #418DFF 0, #275599 100%);">{{plushdata.mloftearsabsorbed}}<span style="font-size: 2rem;">mL</span></h1>
+  </div>
 </div>
 </template>
 
