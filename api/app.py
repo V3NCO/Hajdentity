@@ -30,6 +30,7 @@ from scalar_fastapi import get_scalar_api_reference
 from typing import Annotated, Any
 from pydantic import Field, field_validator
 from emails import verify_mail_template
+from minio.deleteobjects import DeleteObject
 
 
 async def open_database_connection_pool():
@@ -445,8 +446,12 @@ async def add_haj(
   except Exception:
     await HajInfo.delete().where(HajInfo.uuid == haj_id)
     s3.remove_object(settings.s3.bucket, f"hajs/{haj_id}")
-    if i is not None:
-      await client.post(url=f"{settings.sharkey.base_url}api/admin/delete-account", json={"userId":i.json()["id"]}, headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"})
+    try:
+      delid = i.json()["id"] if i is not None else None
+      if delid is not None:
+        await client.post(url=f"{settings.sharkey.base_url}api/admin/delete-account", json={"userId":delid}, headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"})
+    except Exception:
+      pass
     raise HTTPException(status_code=500, detail="Something went wrong, try again later.")
 
 @api.get('/hajs', response_model=HajListResponse, tags=["Haj"])
@@ -479,6 +484,38 @@ async def haj_info(haj_id: UUID4, current_user = Depends(get_optional_user)):
         return {"status": "ok", "haj": haj}
     return {"status": "ok", "haj": haj}
   raise HTTPException(status_code=403, detail="Not authorized")
+
+@api.delete('/hajs/{haj_id}', tags=["Haj"])
+async def delete_haj(haj_id: UUID4, current_user = Depends(get_current_active_user)):
+  haj = await HajInfo.select().where(HajInfo.uuid == haj_id).first()
+  if haj is not None and haj["human"] == current_user.id:
+    sharkey_user = await SharkeyUsers.select().where(SharkeyUsers.haj == haj_id).first()
+    if sharkey_user is not None and haj is not None:
+      id = sharkey_user["sharkey_id"]
+      await client.post(
+        url=f"{settings.sharkey.base_url}api/admin/delete-account",
+        json={"userId": id},
+        headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"}
+      )
+    await SharkeyUsers.delete().where(SharkeyUsers.haj == haj_id).run()
+    await NFCTable.delete().where(NFCTable.haj_id == haj_id).run()
+    posts = await Posts.objects().where(Posts.haj == haj_id)
+    for post in posts:
+      try:
+        s3.remove_object(settings.s3.bucket, f"posts/{haj_id}/{post.id}")
+      except Exception:
+        pass
+      await post.remove()
+      errors = s3.remove_objects(
+        settings.s3.bucket,
+        [DeleteObject(f"hajs/{haj_id}"), DeleteObject(f"pfp/{haj_id}")]
+      )
+      for error in errors:
+        print(f"Error deleting object: {error}")
+    await HajInfo.delete().where(HajInfo.uuid == haj_id).run()
+    return {'status': 'ok'}
+  else:
+    raise HTTPException(status_code=403, detail="Not authorized")
 
 @api.get('/hajs/{haj_id}/image', tags=["Haj"])
 async def get_haj_image(haj_id: UUID4, current_user = Depends(get_optional_user)):
