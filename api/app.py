@@ -2,7 +2,8 @@ from contextlib import asynccontextmanager
 import datetime
 import httpx
 import string
-from home.tables import Humans, HajInfo, NFCTable, SharkeyUsers
+import re
+from home.tables import Humans, HajInfo, NFCTable, SharkeyUsers, Posts
 from fastapi import FastAPI, HTTPException, APIRouter, Depends, Form, Request, Response, UploadFile, File
 from fastapi_mail import MessageSchema, MessageType
 from piccolo.engine import engine_finder
@@ -136,6 +137,29 @@ def haj_from_form(
     gender=gender, floof=floof, squish=squish, lastwashed=lastwashed,
     mloftearsabsorbed=mloftearsabsorbed
   )
+
+class NewPostRequest(BaseModel):
+  note: str
+  alt_text: str
+  cw: str | None = None
+  location: str | None = None
+  nfc_haj: UUID4 | None = None
+
+async def post_from_form(
+  note: Annotated[str, Form()],
+  alt_text: Annotated[str, Form()],
+  cw: Annotated[str | None, Form()] = None,
+  location: Annotated[str | None, Form()] = None,
+  picc_data: Annotated[str | None, Form()] = None,
+  cmac: Annotated[str | None, Form()] = None,
+) -> NewPostRequest:
+  if picc_data is not None and cmac is not None:
+    try:
+      nfc = await nfc_auth(NfcRequest(picc_data=picc_data, cmac=cmac))
+      return NewPostRequest(note=note, alt_text=alt_text, cw=cw, location=location, nfc_haj=nfc["haj"])
+    except HTTPException:
+      pass
+  return NewPostRequest(note=note, alt_text=alt_text, cw=cw, location=location, nfc_haj=None)
 
 class VerifyRequest(BaseModel):
   token: str
@@ -433,7 +457,6 @@ async def list_hajs(
     HajInfo.uuid,
     HajInfo.pronouns,
     HajInfo.displayname,
-    HajInfo.public,
   ).where(HajInfo.human == current_user.id)
   return {"status": "ok", "hajs": hajs}
 
@@ -472,6 +495,79 @@ async def get_haj_image(haj_id: UUID4, current_user = Depends(get_optional_user)
       raise HTTPException(status_code=404, detail="Image not found")
   raise HTTPException(status_code=403, detail="Not authorized")
 
+# TODO : Ability to tag other plushies in messages
+# Also: Ability to add friend plushies - it would be fun if you have to like tap a plush nfc, get a code, tap the other plush, put the code and you're friends
+# Maybe: Badges/Achievements?
+
+@api.post('/hajs/{haj_id}/posts', tags=["Haj"])
+async def make_haj_post(haj_id: UUID4, req: NewPostRequest = Depends(post_from_form), image: UploadFile = File(...), current_user = Depends(get_optional_user)):
+  user_id = current_user.id if current_user else None
+  haj = await HajInfo.select().where(HajInfo.uuid == haj_id).first()
+  token_in_db = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == haj_id).first()
+  token = None
+  if token_in_db is not None and haj is not None:
+    token = decrypt_token(token_in_db["sharkey_key"])
+  if token is not None and haj is not None and (req.nfc_haj == haj_id or user_id == haj["human"]):
+    post_id = uuid.uuid4()
+    try:
+      img = Image.open(image.file)
+      img.verify()
+      image.file.seek(0)
+      ext = img.format.lower() if img.format is not None else None
+      if ext not in ("jpeg", "png", "gif", "webp"):
+        raise HTTPException(status_code=400, detail="Unsupported image format")
+    except Exception:
+      raise HTTPException(status_code=400, detail="Invalid or corrupted image")
+
+    contents = await image.read()
+    size = len(contents)
+    if size > settings.max_image_size * 1024 * 1024:
+      raise HTTPException(status_code=400, detail="Image too large")
+
+    s3.put_object(bucket_name=settings.s3.bucket,object_name=f"posts/{haj_id}/{post_id}", data=BytesIO(contents), length=size, content_type=f"image/{ext}")
+    try:
+      image.file.seek(0)
+
+      imagereq = await client.post(url=f"{settings.sharkey.base_url}api/drive/files/create", data = {"i": token, "force": True}, files = {'file': (f"{post_id}.{ext}", image.file, "image/png")})
+      imageid = imagereq.json()["id"]
+
+      isSensitive = True if req.cw is not None else False
+      await client.post(url=f"{settings.sharkey.base_url}api/drive/files/update", json = {"comment": req.alt_text, "isSensitive": isSensitive, "fileId": imageid}, headers = {"Authorization": f"Bearer {token}"})
+
+      def replace_match(match):
+        username = match.group(0)[1:]
+        if HajInfo.exists().where(HajInfo.username == username):
+            return f"@{username}@{settings.sharkey.base_url.host}"
+        return match.group(0)
+
+      postreq = await client.post(
+        url=f"{settings.sharkey.base_url}api/notes/create",
+        json={
+          "text": re.sub(r"\B@\w+\b", replace_match, req.note),
+          "fileIds":[imageid],
+          "poll":None,
+          "cw": req.cw,
+          "localOnly":False,
+          "visibility":"public",
+          "reactionAcceptance":"nonSensitiveOnly"
+        },
+        headers = {"Authorization": f"Bearer {token}"}
+      )
+
+      postid = postreq.json()["createdNote"]["id"]
+    except Exception:
+      raise HTTPException(status_code=500, detail="An error occured, try again later")
+    await Posts(
+      id=post_id,
+      haj=haj_id,
+      sharkey_id=postid,
+      sharkey_file=imageid,
+      text=req.note,
+      cw=req.cw,
+      created_at=datetime.datetime.now()
+    ).save()
+    return {'status': 'ok'}
+  raise HTTPException(status_code=403, detail="Not authorized")
 
 @api.post('/auth/register', tags=["Auth"])
 async def register(req: RegisterRequest):

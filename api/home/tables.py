@@ -69,3 +69,12 @@ class SharkeyUsers(Table):
   haj = UUID(null=False)
   sharkey_id = Varchar(length=128, unique=True, null=False)
   sharkey_key = Text(null=False)
+
+class Posts(Table):
+  id = UUID(primary_key=True, null=False)
+  haj = UUID(null=False)
+  sharkey_id = Varchar(length=128, unique=True, null=False)
+  sharkey_file = Varchar(length=128, null=False)
+  text = Text()
+  cw = Text(null=True)
+  created_at = Timestamptz(null=False)

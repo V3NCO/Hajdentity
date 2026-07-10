@@ -107,17 +107,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/hajs/posts": {
+    "/api/hajs/{haj_id}/posts": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Haj Posts */
-        get: operations["get_haj_posts_api_hajs_posts_get"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Make Haj Post */
+        post: operations["make_haj_post_api_hajs__haj_id__posts_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -264,6 +264,23 @@ export interface components {
             /** Mloftearsabsorbed */
             mloftearsabsorbed?: number | null;
         };
+        /** Body_make_haj_post_api_hajs__haj_id__posts_post */
+        Body_make_haj_post_api_hajs__haj_id__posts_post: {
+            /** Image */
+            image: string;
+            /** Note */
+            note: string;
+            /** Alt Text */
+            alt_text: string;
+            /** Cw */
+            cw?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Picc Data */
+            picc_data?: string | null;
+            /** Cmac */
+            cmac?: string | null;
+        };
         /** Body_token_api_auth_token_post */
         Body_token_api_auth_token_post: {
             /** Grant Type */
@@ -332,11 +349,6 @@ export interface components {
             lastwashed?: string | null;
             /** Mloftearsabsorbed */
             mloftearsabsorbed?: number | null;
-            /**
-             * Public
-             * @default true
-             */
-            public: boolean;
         };
         /** HajListItem */
         HajListItem: {
@@ -349,11 +361,6 @@ export interface components {
             displayname: string;
             /** Pronouns */
             pronouns?: string | null;
-            /**
-             * Public
-             * @default true
-             */
-            public: boolean;
         };
         /** HajListResponse */
         HajListResponse: {
@@ -544,9 +551,7 @@ export interface operations {
     };
     add_haj_api_hajs_post: {
         parameters: {
-            query?: {
-                public?: boolean;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -639,16 +644,20 @@ export interface operations {
             };
         };
     };
-    get_haj_posts_api_hajs_posts_get: {
+    make_haj_post_api_hajs__haj_id__posts_post: {
         parameters: {
-            query: {
+            query?: never;
+            header?: never;
+            path: {
                 haj_id: string;
             };
-            header?: never;
-            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_make_haj_post_api_hajs__haj_id__posts_post"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
