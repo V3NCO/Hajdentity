@@ -500,7 +500,7 @@ async def get_haj_image(haj_id: UUID4, current_user = Depends(get_optional_user)
 # Maybe: Badges/Achievements?
 
 @api.post('/hajs/{haj_id}/posts', tags=["Haj"])
-async def make_haj_post(haj_id: UUID4, req: NewPostRequest = Depends(post_from_form), image: UploadFile = File(...), current_user = Depends(get_optional_user)):
+async def make_post(haj_id: UUID4, req: NewPostRequest = Depends(post_from_form), image: UploadFile = File(...), current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   haj = await HajInfo.select().where(HajInfo.uuid == haj_id).first()
   token_in_db = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == haj_id).first()
@@ -567,6 +567,29 @@ async def make_haj_post(haj_id: UUID4, req: NewPostRequest = Depends(post_from_f
       created_at=datetime.datetime.now()
     ).save()
     return {'status': 'ok'}
+  raise HTTPException(status_code=403, detail="Not authorized")
+
+@api.get('/hajs/{haj_id}/posts', tags=["Haj"])
+async def get_posts(haj_id: UUID4, current_user = Depends(get_optional_user)):
+  user_id = current_user.id if current_user else None
+  if await check_haj_perm(user_id, haj_id):
+    posts = await Posts.select().where(Posts.haj == haj_id)
+    return {"status": "ok", "posts": posts}
+  raise HTTPException(status_code=403, detail="Not authorized")
+
+@api.get('/hajs/{haj_id}/posts/{post_id}/image', tags=["Haj"])
+async def get_post_image(haj_id: UUID4, post_id: UUID4, current_user = Depends(get_optional_user)):
+  user_id = current_user.id if current_user else None
+  if await check_haj_perm(user_id, haj_id):
+    try:
+      obj = s3.get_object(settings.s3.bucket, f"posts/{haj_id}/{post_id}")
+      return StreamingResponse(
+        obj.stream(),
+        media_type=obj.headers.get("Content-Type", "image/jpeg"),
+        headers={"Cache-Control": "public, max-age=86400"}
+      )
+    except Exception:
+      raise HTTPException(status_code=404, detail="Image not found")
   raise HTTPException(status_code=403, detail="Not authorized")
 
 @api.post('/auth/register', tags=["Auth"])
