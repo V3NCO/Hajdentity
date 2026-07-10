@@ -21,8 +21,8 @@ import secrets
 from urllib.parse import urlparse
 from auth import (
   check_haj_perm, create_user, authenticate_user, get_current_active_user, get_optional_user,
-  create_verification_token, verify_email_token,
-  create_session, delete_session, set_session_cookie, clear_session_cookie,
+  create_verification_token, set_nfc_cookie, verify_email_token, create_nfc_session, _cookie_kwargs,
+  create_user_session, delete_session, set_session_cookie, clear_session_cookie, validate_nfc_session
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import StreamingResponse
@@ -66,6 +66,15 @@ app = FastAPI(lifespan=lifespan)
 api = APIRouter(prefix="/api")
 client = httpx.AsyncClient()
 
+class PostListItem(BaseModel):
+  id: UUID4
+  haj: UUID4
+  sharkey_id: str
+  sharkey_file: str
+  text: str
+  cw: str
+  created_at: datetime.datetime
+
 class HajListItem(BaseModel):
   uuid: UUID4
   displayname: str
@@ -86,6 +95,10 @@ class HajItem(BaseModel):
   squish: int | None = None
   lastwashed: datetime.datetime | None = None
   mloftearsabsorbed: int | None = None
+
+class PostListResponse(BaseModel):
+  status: str
+  posts: list[PostListItem]
 
 class HajListResponse(BaseModel):
   status: str
@@ -185,23 +198,14 @@ class NewPostRequest(BaseModel):
   alt_text: str
   cw: str | None = None
   location: str | None = None
-  nfc_haj: UUID4 | None = None
 
 async def post_from_form(
   note: Annotated[str, Form()],
   alt_text: Annotated[str, Form()],
   cw: Annotated[str | None, Form()] = None,
   location: Annotated[str | None, Form()] = None,
-  picc_data: Annotated[str | None, Form()] = None,
-  cmac: Annotated[str | None, Form()] = None,
 ) -> NewPostRequest:
-  if picc_data is not None and cmac is not None:
-    try:
-      nfc = await nfc_auth(NfcRequest(picc_data=picc_data, cmac=cmac))
-      return NewPostRequest(note=note, alt_text=alt_text, cw=cw, location=location, nfc_haj=nfc["haj"])
-    except HTTPException:
-      pass
-  return NewPostRequest(note=note, alt_text=alt_text, cw=cw, location=location, nfc_haj=None)
+  return NewPostRequest(note=note, alt_text=alt_text, cw=cw, location=location)
 
 class VerifyRequest(BaseModel):
   token: str
@@ -255,7 +259,7 @@ async def scalar_html():
   )
 
 @api.post("/nfc/auth", tags=["NFC"])
-async def nfc_auth(tap: NfcRequest):
+async def nfc_auth(response: Response, request: Request, tap: NfcRequest):
   picc_bytes = bytes.fromhex(tap.picc_data)
   iv = b'\x00' * 16
   cipher = AES.new(settings.key3, AES.MODE_CBC, iv)
@@ -292,6 +296,9 @@ async def nfc_auth(tap: NfcRequest):
 
   if tag.last_counter is not None and counter <= tag.last_counter:
     raise HTTPException(status_code=400, detail="Counter is too old, try tapping the tag physically again")
+
+  session_id = await create_nfc_session(str(tag.haj_id), request)
+  set_nfc_cookie(response, str(tag.haj_id), session_id)
 
   await tag.update({NFCTable.last_counter: counter})
 
@@ -698,14 +705,20 @@ async def get_haj_pfp(haj_id: UUID4, current_user = Depends(get_optional_user)):
 # Maybe: Badges/Achievements?
 
 @api.post('/hajs/{haj_id}/posts', tags=["Haj"])
-async def make_post(haj_id: UUID4, req: NewPostRequest = Depends(post_from_form), image: UploadFile = File(...), current_user = Depends(get_optional_user)):
+async def make_post(request: Request, response: Response, haj_id: UUID4, req: NewPostRequest = Depends(post_from_form), image: UploadFile = File(...), current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
+  nfc_session = request.cookies.get(str(haj_id))
+  nfc_auth = False
+  if nfc_session:
+    nfc_auth = await validate_nfc_session(str(haj_id), nfc_session)
+    if not nfc_auth:
+      response.delete_cookie(str(haj_id), **_cookie_kwargs())
   haj = await HajInfo.select().where(HajInfo.uuid == haj_id).first()
   token_in_db = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == haj_id).first()
   token = None
   if token_in_db is not None and haj is not None:
     token = decrypt_token(token_in_db["sharkey_key"])
-  if token is not None and haj is not None and (req.nfc_haj == haj_id or user_id == haj["human"]):
+  if token is not None and haj is not None and (nfc_auth or user_id == haj["human"]):
     post_id = uuid.uuid4()
     try:
       img = Image.open(image.file)
@@ -767,13 +780,13 @@ async def make_post(haj_id: UUID4, req: NewPostRequest = Depends(post_from_form)
     return {'status': 'ok'}
   raise HTTPException(status_code=403, detail="Not authorized")
 
-@api.get('/hajs/{haj_id}/posts', tags=["Haj"])
+@api.get('/hajs/{haj_id}/posts', response_model=PostListResponse, tags=["Haj"])
 async def get_posts(haj_id: UUID4, current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   if await check_haj_perm(user_id, haj_id):
     posts = await Posts.select().where(Posts.haj == haj_id).order_by(Posts.created_at, ascending=False)
     return {"status": "ok", "posts": posts}
-  raise HTTPException(status_code=403, detail="Not authorized")
+  raise HTTPException(status_code=403, detail="Not authorized, try tapping again")
 
 @api.get('/hajs/{haj_id}/posts/{post_id}/image', tags=["Haj"])
 async def get_post_image(haj_id: UUID4, post_id: UUID4, current_user = Depends(get_optional_user)):
@@ -848,7 +861,7 @@ async def token(response: Response, request: Request, form_data: OAuth2PasswordR
   if not user.verified:
     raise HTTPException(status_code=403, detail="Email not verified. Please check your inbox.")
 
-  session_id = await create_session(str(user.id), request)
+  session_id = await create_user_session(str(user.id), request)
   set_session_cookie(response, session_id)
 
   return {"username": user.username, "disabled": user.disabled}

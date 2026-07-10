@@ -63,7 +63,7 @@ def _create_session_id() -> str:
   return hashlib.sha256(secrets.token_bytes(64)).hexdigest()
 
 
-async def create_session(user_id: str, request: Request) -> str:
+async def create_user_session(user_id: str, request: Request) -> str:
   session_id = _create_session_id()
   now = datetime.now(timezone.utc)
   await Sessions.insert(Sessions(
@@ -78,6 +78,20 @@ async def create_session(user_id: str, request: Request) -> str:
   ))
   return session_id
 
+async def create_nfc_session(haj_id: str, request: Request) -> str:
+  session_id = _create_session_id()
+  now = datetime.now(timezone.utc)
+  await Sessions.insert(Sessions(
+    id=uuid.uuid4(),
+    type="nfc",
+    associated=haj_id,
+    session_id=session_id,
+    created_at=now,
+    last_seen_at=now,
+    user_agent=request.headers.get("user-agent"),
+    ip_address=request.client.host if request.client else None,
+  ))
+  return session_id
 
 def set_session_cookie(response: Response, session_id: str):
   max_age = settings.session_absolute_days * 86400
@@ -86,6 +100,12 @@ def set_session_cookie(response: Response, session_id: str):
     max_age=max_age, **_cookie_kwargs()
   )
 
+def set_nfc_cookie(response: Response, haj_id: str, session_id: str):
+  max_age = settings.nfc_session_minutes * 60
+  response.set_cookie(
+    haj_id, session_id,
+    max_age=max_age, **_cookie_kwargs()
+  )
 
 def clear_session_cookie(response: Response):
   response.delete_cookie("session", **_cookie_kwargs())
@@ -101,6 +121,23 @@ async def touch_session(session_id: str):
     Sessions.session_id == session_id
   )
 
+async def validate_nfc_session(haj_id: str, session_id: str) -> bool:
+    session_row = await Sessions.select().where(Sessions.session_id == session_id and Sessions.type == "nfc").first()
+    if not session_row:
+      return False
+
+    now = datetime.now(timezone.utc)
+    absolute_cutoff = now - timedelta(minutes=settings.nfc_session_minutes)
+
+    if session_row["created_at"] < absolute_cutoff:
+      await Sessions.delete().where(Sessions.id == session_row["id"])
+      return False
+
+    await touch_session(session_id)
+    if haj_id == session_row["associated"]:
+      return True
+    else:
+      return False
 
 async def validate_user_session(session_id: str) -> UserInDB | None:
     session_row = await Sessions.select().where(Sessions.session_id == session_id and Sessions.type == "user").first()
@@ -169,7 +206,7 @@ async def get_current_user(request: Request):
   if not session_id:
     raise HTTPException(status_code=401, detail="Not authenticated")
 
-  user = await validate_session(session_id)
+  user = await validate_user_session(session_id)
   if not user:
     clear_session_cookie(Response())
     raise HTTPException(status_code=401, detail="Session expired")
@@ -188,7 +225,7 @@ async def get_optional_user(request: Request) -> UserInDB | None:
   session_id = request.cookies.get("session")
   if not session_id:
     return None
-  return await validate_session(session_id)
+  return await validate_user_session(session_id)
 
 def create_verification_token(email: str) -> str:
   return jwt.encode({

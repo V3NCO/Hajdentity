@@ -84,10 +84,12 @@ export interface paths {
         get: operations["haj_info_api_hajs__haj_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Haj */
+        delete: operations["delete_haj_api_hajs__haj_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Patch Haj */
+        patch: operations["patch_haj_api_hajs__haj_id__patch"];
         trace?: never;
     };
     "/api/hajs/{haj_id}/image": {
@@ -107,6 +109,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/hajs/{haj_id}/pfp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Haj Pfp */
+        get: operations["get_haj_pfp_api_hajs__haj_id__pfp_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/hajs/{haj_id}/posts": {
         parameters: {
             query?: never;
@@ -114,10 +133,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get Posts */
+        get: operations["get_posts_api_hajs__haj_id__posts_get"];
         put?: never;
-        /** Make Haj Post */
-        post: operations["make_haj_post_api_hajs__haj_id__posts_post"];
+        /** Make Post */
+        post: operations["make_post_api_hajs__haj_id__posts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hajs/{haj_id}/posts/{post_id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Post Image */
+        get: operations["get_post_image_api_hajs__haj_id__posts__post_id__image_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -264,8 +301,8 @@ export interface components {
             /** Mloftearsabsorbed */
             mloftearsabsorbed?: number | null;
         };
-        /** Body_make_haj_post_api_hajs__haj_id__posts_post */
-        Body_make_haj_post_api_hajs__haj_id__posts_post: {
+        /** Body_make_post_api_hajs__haj_id__posts_post */
+        Body_make_post_api_hajs__haj_id__posts_post: {
             /** Image */
             image: string;
             /** Note */
@@ -276,10 +313,35 @@ export interface components {
             cw?: string | null;
             /** Location */
             location?: string | null;
-            /** Picc Data */
-            picc_data?: string | null;
-            /** Cmac */
-            cmac?: string | null;
+        };
+        /** Body_patch_haj_api_hajs__haj_id__patch */
+        Body_patch_haj_api_hajs__haj_id__patch: {
+            /** Image */
+            image?: string | null;
+            /** Pfp */
+            pfp?: string | null;
+            /** Displayname */
+            displayname?: string | null;
+            /** Date */
+            date?: string | null;
+            /** Size */
+            size?: number | null;
+            /** Description */
+            description?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Pronouns */
+            pronouns?: string | null;
+            /** Gender */
+            gender?: string | null;
+            /** Floof */
+            floof?: number | null;
+            /** Squish */
+            squish?: number | null;
+            /** Lastwashed */
+            lastwashed?: string | null;
+            /** Mloftearsabsorbed */
+            mloftearsabsorbed?: number | null;
         };
         /** Body_token_api_auth_token_post */
         Body_token_api_auth_token_post: {
@@ -393,6 +455,39 @@ export interface components {
             picc_data: string;
             /** Cmac */
             cmac: string;
+        };
+        /** PostListItem */
+        PostListItem: {
+            /**
+             * Id
+             * Format: uuid4
+             */
+            id: string;
+            /**
+             * Haj
+             * Format: uuid4
+             */
+            haj: string;
+            /** Sharkey Id */
+            sharkey_id: string;
+            /** Sharkey File */
+            sharkey_file: string;
+            /** Text */
+            text: string;
+            /** Cw */
+            cw: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** PostListResponse */
+        PostListResponse: {
+            /** Status */
+            status: string;
+            /** Posts */
+            posts: components["schemas"]["PostListItem"][];
         };
         /** ProvisionRequest */
         ProvisionRequest: {
@@ -613,6 +708,72 @@ export interface operations {
             };
         };
     };
+    delete_haj_api_hajs__haj_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haj_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_haj_api_hajs__haj_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haj_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_patch_haj_api_hajs__haj_id__patch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_haj_image_api_hajs__haj_id__image_get: {
         parameters: {
             query?: never;
@@ -644,7 +805,69 @@ export interface operations {
             };
         };
     };
-    make_haj_post_api_hajs__haj_id__posts_post: {
+    get_haj_pfp_api_hajs__haj_id__pfp_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haj_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_posts_api_hajs__haj_id__posts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haj_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    make_post_api_hajs__haj_id__posts_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -655,9 +878,41 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_make_haj_post_api_hajs__haj_id__posts_post"];
+                "multipart/form-data": components["schemas"]["Body_make_post_api_hajs__haj_id__posts_post"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_post_image_api_hajs__haj_id__posts__post_id__image_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haj_id: string;
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

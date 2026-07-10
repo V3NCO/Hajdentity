@@ -78,6 +78,7 @@ class Settings(BaseSettings):
     token_enc: Annotated[str, Field(min_length=64, max_length=64)] # 32 byte key for token encryption
     session_idle_minutes: int = 43200 # Session idle timeout in minutes (30 days)
     session_absolute_days: int = 90 # Max session lifetime regardless of activity
+    nfc_session_minutes: int = 10 # NFC Session lifetime
     verification_token_expire_minutes: int = 1440 # Minutes until verification token expires
     algorithm: str = "HS256" # encryption algorithm of user passwords in database
     cookie_secure: bool = True # Set Secure flag on session cookie
