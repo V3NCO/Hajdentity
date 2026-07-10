@@ -118,6 +118,47 @@ class NewHajRequest(BaseModel):
       raise ValueError("Display name cannot be blank")
     return cleaned
 
+class PatchHajRequest(BaseModel):
+  displayname: Annotated[str, Field(min_length=1, max_length=48)] | None = None
+  date: datetime.date | None = None
+  size: float | None = None
+  location: str | None = None
+  description: str | None = None
+  pronouns: Annotated[str, Field(max_length=32)] | None = None
+  gender: Annotated[str, Field(max_length=96)] | None = None
+  floof: Annotated[int, Field(ge=1, le=10)] | None = None
+  squish: Annotated[int, Field(ge=1, le=10)] | None = None
+  lastwashed: datetime.datetime | None = None
+  mloftearsabsorbed: float | None = None
+
+  @field_validator("displayname", mode="before")
+  @classmethod
+  def clean_displayname(cls, v: str) -> str:
+    cleaned = v.strip()
+    if not cleaned:
+      raise ValueError("Display name cannot be blank")
+    return cleaned
+
+def patch_from_form(
+  displayname: Annotated[str | None, Form(min_length=1, max_length=48)] = None,
+  date: Annotated[datetime.date | None, Form()] = None,
+  size: Annotated[float | None, Form()] = None,
+  description: Annotated[str | None, Form()] = None,
+  location: Annotated[str | None, Form()] = None,
+  pronouns: Annotated[str | None, Form(max_length=32)] = None,
+  gender: Annotated[str | None, Form(max_length=96)] = None,
+  floof: Annotated[int | None, Form(ge=1, le=10)] = None,
+  squish: Annotated[int | None, Form(ge=1, le=10)] = None,
+  lastwashed: Annotated[datetime.datetime | None, Form()] = None,
+  mloftearsabsorbed: Annotated[float | None, Form()] = None,
+) -> PatchHajRequest:
+  return PatchHajRequest(
+    displayname=displayname, date=date, size=size,
+    location=location, description=description, pronouns=pronouns,
+    gender=gender, floof=floof, squish=squish, lastwashed=lastwashed,
+    mloftearsabsorbed=mloftearsabsorbed
+  )
+
 def haj_from_form(
   displayname: Annotated[str, Form(min_length=1, max_length=48)],
   username: Annotated[str, Form(pattern=r"^[a-z0-9_-]{3,48}$")],
@@ -513,6 +554,111 @@ async def delete_haj(haj_id: UUID4, current_user = Depends(get_current_active_us
       for error in errors:
         print(f"Error deleting object: {error}")
     await HajInfo.delete().where(HajInfo.uuid == haj_id).run()
+    return {'status': 'ok'}
+  else:
+    raise HTTPException(status_code=403, detail="Not authorized")
+
+@api.patch('/hajs/{haj_id}', tags=["Haj"])
+async def patch_haj(
+  haj_id: UUID4,
+  req: PatchHajRequest = Depends(patch_from_form),
+  image: UploadFile | None = None,
+  pfp: UploadFile | None = None,
+  current_user = Depends(get_current_active_user)
+):
+  haj = await HajInfo.objects().get(HajInfo.uuid == haj_id)
+  if haj is not None and haj["human"] == current_user.id:
+    update_data = {
+      key: value for key, value in req.model_dump(
+        exclude_unset=True,
+        exclude_defaults=True,
+        exclude_none = True
+      ).items()
+      if value is not None
+    }
+    if update_data:
+      await haj.update(**update_data)
+    if image is not None:
+      try:
+        img = Image.open(image.file)
+        img.verify()
+        image.file.seek(0)
+        ext = img.format.lower() if img.format is not None else None
+        if ext not in ("jpeg", "png", "gif", "webp"):
+          raise HTTPException(status_code=400, detail="Unsupported image format")
+      except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or corrupted image")
+
+      contents = await image.read()
+      size = len(contents)
+      if size > settings.max_image_size * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image too large")
+
+      s3.put_object(bucket_name=settings.s3.bucket,object_name=f"hajs/{haj_id}", data=BytesIO(contents), length=size, content_type=f"image/{ext}")
+
+    if pfp is not None:
+      try:
+        pfpimg = Image.open(pfp.file)
+        pfpimg.verify()
+        pfp.file.seek(0)
+        pfpext = pfpimg.format.lower() if pfpimg.format is not None else None
+        if pfpext not in ("jpeg", "png", "gif", "webp"):
+          raise HTTPException(status_code=400, detail="Unsupported image format")
+      except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or corrupted image")
+
+      pfpcontents = await pfp.read()
+      pfpsize = len(pfpcontents)
+      if pfpsize > settings.max_image_size * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image too large")
+
+      s3.put_object(bucket_name=settings.s3.bucket,object_name=f"pfp/{haj_id}",data=BytesIO(pfpcontents),length=pfpsize,content_type=f"image/{pfpext}")
+
+      token_in_db = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == haj_id).first()
+      token = None
+      if token_in_db is not None and haj is not None:
+        token = decrypt_token(token_in_db["sharkey_key"])
+      if token is not None and haj is not None:
+        if image is not None:
+          image.file.seek(0)
+          bannerreq = await client.post(url=f"{settings.sharkey.base_url}api/drive/files/create", data = {"i": token, "force": True, "name": "banner.png"}, files = {'file': ("banner.png", image.file, "image/png")})
+          await client.post(url=f"{settings.sharkey.base_url}api/i/update", json={"bannerId": bannerreq.json()["id"]}, headers={"Authorization": f"Bearer {token}"})
+        if pfp is not None:
+          pfp.file.seek(0)
+          pfpreq = await client.post(url=f"{settings.sharkey.base_url}api/drive/files/create", data = {"i": token, "force": True, "name": "pfp.png"}, files = {'file': ("pfp.png", pfp.file, "image/png")})
+          await client.post(url=f"{settings.sharkey.base_url}api/i/update", json={"avatarId": pfpreq.json()["id"]}, headers={"Authorization": f"Bearer {token}"})
+
+        parts = []
+        pronouns_gender = f"{haj.pronouns} - {haj.gender}" if haj.pronouns and haj.gender else (haj.pronouns or haj.gender or None)
+        if pronouns_gender:
+          parts.append(pronouns_gender)
+        parts.append(haj.description)
+        if haj.size:
+          parts.append(f"📏 {haj.size}cm")
+        if haj.floof:
+          floof_bar = '█' * haj.floof + '░' * (10 - haj.floof)
+          parts.append(f"☁️ Fluffiness | {floof_bar} | {haj.floof}/10")
+        if haj.squish:
+          squish_bar = '█' * haj.squish + '░' * (10 - haj.squish)
+          parts.append(f"🧸 Squishiness | {squish_bar} | {haj.squish}/10")
+        if haj.lastwashed:
+          parts.append(f"🧽 Last washed on {haj.lastwashed.strftime('%c')}")
+        parts.append(f"---\n⚠️🦈 This account is automated via [Hajdentity]({settings.base_url}plush/{haj_id}))!🦈⚠️")
+
+        description_block = "\n\n".join(parts)
+
+        await client.post(
+          url=f"{settings.sharkey.base_url}api/i/update",
+          json={
+            "name": haj.displayname,
+            "birthday": haj.date.strftime("%Y-%m-%d"),
+            "location": haj.location,
+            "description": description_block,
+            "attributionDomains": [settings.base_url.host],
+          },
+          headers={"Authorization": f"Bearer {token}"}
+        )
+
     return {'status': 'ok'}
   else:
     raise HTTPException(status_code=403, detail="Not authorized")
