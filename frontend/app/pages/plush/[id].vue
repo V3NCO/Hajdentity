@@ -84,10 +84,16 @@
       <h1 style="background-image: radial-gradient(circle at top left, #AD41FF 0, #682799 100%);">{{formatCompactNumber(sharkeydata.followersCount)}}</h1>
     </div>
   </div>
+  <div class="tile" :style="{ backgroundImage: `url(/api/hajs/${postdata[0]?.haj}/pfp)` }"></div>
   <div class="tile"></div>
-  <div class="tile"></div>
-  <div class="tile"></div>
-  <div class="tile"></div>
+  <div class="tile stat">
+    <h2>Size</h2>
+    <h1 style="background-image: radial-gradient(circle at top left, #FF9A41 0, #995C27 100%);">{{plushdata.size}}<span style="font-size: 2rem;">cm</span></h1>
+  </div>
+  <div class="tile stat">
+    <h2>Gender</h2>
+    <h3>{{plushdata.gender}}</h3>
+  </div>
   <div class="tile"></div>
   <div class="tile"></div>
   <div class="tile"></div>
@@ -161,6 +167,12 @@ body {
   position: absolute;
   top: 1em;
   left: 1em;
+}
+
+.stat h3 {
+  font-family: "Space Grotesk";
+  font-weight: 400;
+  font-size: 2rem;
 }
 
 .stat h1 {
@@ -246,6 +258,8 @@ body {
   grid-column:  4;
   grid-row: 3;
   outline: 0.4em solid #638FAC;
+  background-size: cover;
+  background-position: center;
 }
 
 .tile:nth-child(5) {
@@ -256,6 +270,10 @@ body {
 .tile:nth-child(6) {
   grid-column:  5;
   grid-row: 4;
+}
+
+.tile:nth-child(6) h1 {
+  font-size: 3rem;
 }
 
 .tile:nth-child(7) {

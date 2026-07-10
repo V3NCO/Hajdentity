@@ -495,6 +495,21 @@ async def get_haj_image(haj_id: UUID4, current_user = Depends(get_optional_user)
       raise HTTPException(status_code=404, detail="Image not found")
   raise HTTPException(status_code=403, detail="Not authorized")
 
+@api.get('/hajs/{haj_id}/pfp', tags=["Haj"])
+async def get_haj_pfp(haj_id: UUID4, current_user = Depends(get_optional_user)):
+  user_id = current_user.id if current_user else None
+  if await check_haj_perm(user_id, haj_id):
+    try:
+      obj = s3.get_object(settings.s3.bucket, f"pfp/{haj_id}")
+      return StreamingResponse(
+        obj.stream(),
+        media_type=obj.headers.get("Content-Type", "image/jpeg"),
+        headers={"Cache-Control": "public, max-age=86400"}
+      )
+    except Exception:
+      raise HTTPException(status_code=404, detail="Image not found")
+  raise HTTPException(status_code=403, detail="Not authorized")
+
 # TODO : Ability to tag other plushies in messages
 # Also: Ability to add friend plushies - it would be fun if you have to like tap a plush nfc, get a code, tap the other plush, put the code and you're friends
 # Maybe: Badges/Achievements?
