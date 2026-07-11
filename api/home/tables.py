@@ -1,5 +1,5 @@
 from piccolo.table import Table
-from piccolo.columns import UUID, Timestamptz,  Numeric, Date, Varchar, Integer, Time, Text, Boolean
+from piccolo.columns import UUID, Timestamptz, ForeignKey, Numeric, Date, Varchar, Integer, Time, Text, Boolean
 
 
 class NFCTable(Table):
@@ -32,9 +32,9 @@ class NFCTable(Table):
 
 class HajInfo(Table):
   uuid = UUID(unique=True, null=False, index=True)
-  human = UUID(null=False)
+  human = UUID(null=False, index=True)
   displayname = Varchar(255, null=False)
-  username = Varchar(255, null=False)
+  username = Varchar(255, null=False, index=True)
   date = Date(null=False)
   size = Numeric(null=False)
   location = Text(null=True)
@@ -58,10 +58,10 @@ class Humans(Table):
 class Sessions(Table):
   id = UUID(primary_key=True, null=False)
   type = Varchar(length=64, null=False)
-  associated = UUID(null=False)
+  associated = UUID(null=False, index=True)
   session_id = Varchar(length=64, unique=True, null=False, index=True)
   created_at = Timestamptz(null=False)
-  last_seen_at = Timestamptz(null=False)
+  last_seen_at = Timestamptz(null=False, index=True)
   user_agent = Text(null=True)
   ip_address = Varchar(length=45, null=True)
 
@@ -73,9 +73,14 @@ class SharkeyUsers(Table):
 
 class Posts(Table):
   id = UUID(primary_key=True, null=False)
-  haj = UUID(null=False)
+  haj = UUID(null=False, index=True)
   sharkey_id = Varchar(length=128, unique=True, null=False)
   sharkey_file = Varchar(length=128, null=False)
   text = Text()
   cw = Text(null=True)
   created_at = Timestamptz(null=False)
+
+class Friends(Table):
+  haj1 = ForeignKey(references=HajInfo, target_column=HajInfo.uuid, null=True)
+  haj2 = ForeignKey(references=HajInfo, target_column=HajInfo.uuid, null=True)
+  code = Varchar(length=8, unique=True, null=True)

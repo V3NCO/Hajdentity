@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import cardsCss from '~/assets/css/cards.css?raw'
-import loadingCss from '~/assets/css/loading.css?raw'
+import '~/assets/css/cards.css'
 import { useApi } from '~/lib/api'
 
 useSeoMeta({
@@ -12,7 +11,7 @@ useSeoMeta({
 })
 
 
-useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: loadingCss }, { textContent: cardsCss }] })
+useHead({ htmlAttrs: { lang: 'en' }})
 definePageMeta({ middleware: 'auth', ssr: false })
 
 const api = useApi()

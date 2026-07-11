@@ -13,8 +13,12 @@ useSeoMeta({
 })
 
 definePageMeta({ middleware: 'guest' })
-import authCss from '~/assets/css/auth.css?raw'
-useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: authCss }] })
+useHead({
+  htmlAttrs: { lang: 'en' },
+  bodyAttrs: {
+    style: 'overflow: hidden; background-image: url("/stocksharks.jpeg"); background-repeat: no-repeat; background-size: cover; font-family: "Noto Sans";'
+  }
+})
 
 const registerForm = ref<HTMLFormElement | null>(null)
 const username = ref('')
@@ -68,10 +72,10 @@ async function onSubmit() {
     alert((e as any)?.response?._data?.detail || (e as any)?.data?.detail || 'Registration failed')
   }
 }
-
 </script>
 
 <template>
+<div class="auth-page">
 <div class="rcont">
   <div class="vcont">
     <form ref="registerForm" @submit.prevent="onSubmit" novalidate>
@@ -123,7 +127,26 @@ async function onSubmit() {
     </form>
   </div>
 </div>
+</div>
 </template>
+
+<style>
+html, body { height: 100%; margin: 0; }
+#app, #__nuxt { height: 100%; }
+.auth-page { height: 100%; }
+.auth-page input { border-radius: 10rem; border: 2px solid #95ADB6; background-color: #C3D0D5; font-weight: 600; color: black; }
+.auth-page button { border-radius: 1rem; border: 2px solid #95ADB6; background-color: #C3D0D5; font-weight: 700; }
+.auth-page button:hover { border: 3px solid #95ADB6; background-color: #E3F0F5; }
+.auth-page button:active { border: 3px solid #859DA6; background-color: #A3B0B5; }
+.auth-page input:user-invalid { border: 2px solid #EF959C; background-color: #F7CACE; }
+.auth-page .err { color: #EC839B; background-color: #F7CACE; font-size: 0.85rem; font-weight: 600; margin: -0.5rem 0 0 0; text-align: left; align-self:auto; padding: 0.25rem 0.75rem 0.25rem 0.75rem; border-radius: 3em; display: inline-flex; align-items: center; gap: 0.15rem; }
+.auth-page .rcont, .auth-page .vcont { box-sizing: border-box; }
+.auth-page .rcont { width: 50vw; height: 100svh; position: relative; float: right; padding: 1em; overflow: hidden; }
+.auth-page .vcont { padding: 1em; height: 100%; background-image: linear-gradient(147deg, #9FB2CACC, #5D7798CC); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 18px; border: 1px solid rgba(255,255,255,0.3); }
+.auth-page form { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; height: 100%; }
+.auth-page form input { width: 80%; height: 4%; padding: 0.25rem 0.25rem 0.25rem 2rem; }
+.auth-page form button { margin-top: 1em; width: 80%; height: 2.5rem; }
+</style>
 
 <style scoped>
 @media screen and (max-width: 790px) {

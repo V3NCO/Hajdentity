@@ -2,8 +2,7 @@
 const route = useRoute()
 const { picc_data, cmac } = route.query
 
-import loadingCss from '~/assets/css/loading.css?raw'
-useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: loadingCss }] })
+useHead({ htmlAttrs: { lang: 'en' }})
 
 
 const haj = ref()

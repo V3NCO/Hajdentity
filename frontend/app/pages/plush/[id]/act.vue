@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import '~/assets/css/fonts.css'
-import loadingCss from '~/assets/css/loading.css?raw'
 import { useApi } from '~/lib/api'
 
-useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: loadingCss }] })
+useHead({ htmlAttrs: { lang: 'en' }})
 const api = useApi()
 const route = useRoute()
 

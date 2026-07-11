@@ -4,7 +4,7 @@ const { resolve } = createResolver(import.meta.url)
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-
+  css: ['~/assets/css/fonts.css', '~/assets/css/loading.css'],
   devtools: {
     enabled: true,
 

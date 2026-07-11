@@ -10,7 +10,7 @@ const pfpPreview = ref('')
 const pfpDragging = ref(false)
 const pfpFileInput = ref<HTMLInputElement>()
 const submitting = ref(false)
-import cardsCss from '~/assets/css/cards.css?raw'
+import '~/assets/css/cards.css'
 
 
 useSeoMeta({

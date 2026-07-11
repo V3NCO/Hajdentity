@@ -672,33 +672,33 @@ async def patch_haj(
 
 @api.get('/hajs/{haj_id}/image', tags=["Haj"])
 async def get_haj_image(haj_id: UUID4, current_user = Depends(get_optional_user)):
-  user_id = current_user.id if current_user else None
-  if await check_haj_perm(user_id, haj_id):
-    try:
-      obj = s3.get_object(settings.s3.bucket, f"hajs/{haj_id}")
-      return StreamingResponse(
-        obj.stream(),
-        media_type=obj.headers.get("Content-Type", "image/jpeg"),
-        headers={"Cache-Control": "public, max-age=86400"}
-      )
-    except Exception:
-      raise HTTPException(status_code=404, detail="Image not found")
-  raise HTTPException(status_code=403, detail="Not authorized")
+  exists = await HajInfo.exists().where(HajInfo.uuid == haj_id)
+  if not exists:
+    raise HTTPException(status_code=404, detail="Not found")
+  try:
+    obj = s3.get_object(settings.s3.bucket, f"hajs/{haj_id}")
+    return StreamingResponse(
+      obj.stream(),
+      media_type=obj.headers.get("Content-Type", "image/jpeg"),
+      headers={"Cache-Control": "public, max-age=86400"}
+    )
+  except Exception:
+    raise HTTPException(status_code=404, detail="Image not found")
 
 @api.get('/hajs/{haj_id}/pfp', tags=["Haj"])
 async def get_haj_pfp(haj_id: UUID4, current_user = Depends(get_optional_user)):
-  user_id = current_user.id if current_user else None
-  if await check_haj_perm(user_id, haj_id):
-    try:
-      obj = s3.get_object(settings.s3.bucket, f"pfp/{haj_id}")
-      return StreamingResponse(
-        obj.stream(),
-        media_type=obj.headers.get("Content-Type", "image/jpeg"),
-        headers={"Cache-Control": "public, max-age=86400"}
-      )
-    except Exception:
-      raise HTTPException(status_code=404, detail="Image not found")
-  raise HTTPException(status_code=403, detail="Not authorized")
+  exists = await HajInfo.exists().where(HajInfo.uuid == haj_id)
+  if not exists:
+    raise HTTPException(status_code=404, detail="Not found")
+  try:
+    obj = s3.get_object(settings.s3.bucket, f"pfp/{haj_id}")
+    return StreamingResponse(
+      obj.stream(),
+      media_type=obj.headers.get("Content-Type", "image/jpeg"),
+      headers={"Cache-Control": "public, max-age=86400"}
+    )
+  except Exception:
+    raise HTTPException(status_code=404, detail="Image not found")
 
 # TODO : Ability to tag other plushies in messages
 # Also: Ability to add friend plushies - it would be fun if you have to like tap a plush nfc, get a code, tap the other plush, put the code and you're friends
@@ -790,18 +790,18 @@ async def get_posts(haj_id: UUID4, current_user = Depends(get_optional_user)):
 
 @api.get('/hajs/{haj_id}/posts/{post_id}/image', tags=["Haj"])
 async def get_post_image(haj_id: UUID4, post_id: UUID4, current_user = Depends(get_optional_user)):
-  user_id = current_user.id if current_user else None
-  if await check_haj_perm(user_id, haj_id):
-    try:
-      obj = s3.get_object(settings.s3.bucket, f"posts/{haj_id}/{post_id}")
-      return StreamingResponse(
-        obj.stream(),
-        media_type=obj.headers.get("Content-Type", "image/jpeg"),
-        headers={"Cache-Control": "public, max-age=86400"}
-      )
-    except Exception:
-      raise HTTPException(status_code=404, detail="Image not found")
-  raise HTTPException(status_code=403, detail="Not authorized")
+  exists = await HajInfo.exists().where(HajInfo.uuid == haj_id)
+  if not exists:
+    raise HTTPException(status_code=404, detail="Not found")
+  try:
+    obj = s3.get_object(settings.s3.bucket, f"posts/{haj_id}/{post_id}")
+    return StreamingResponse(
+      obj.stream(),
+      media_type=obj.headers.get("Content-Type", "image/jpeg"),
+      headers={"Cache-Control": "public, max-age=86400"}
+    )
+  except Exception:
+    raise HTTPException(status_code=404, detail="Image not found")
 
 @api.post('/auth/register', tags=["Auth"])
 async def register(req: RegisterRequest):
