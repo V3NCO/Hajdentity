@@ -72,8 +72,8 @@ class PostListItem(BaseModel):
   sharkey_id: str
   sharkey_file: str
   text: str
-  cw: str
-  created_at: datetime.datetime
+  cw: str | None
+  created_at: datetime.datetime | None
 
 class HajListItem(BaseModel):
   uuid: UUID4
