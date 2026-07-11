@@ -25,7 +25,13 @@ onMounted(async () => {
 })
 </script>
 <template>
-<div class="midcont">
+<Transition><div v-if="loading" class="loading">
+  <h1>Loading...</h1>
+  <video autoplay loop muted playsinline>
+    <source src="/blahaj.webm" type="video/webm">
+  </video>
+</div></Transition>
+<div class="midcont" v-if="!loading">
   <div class="act-topline">
     <div class="act-pfp" :style="{ backgroundImage: `url(/api/hajs/${route.params.id}/pfp)` }"></div>
     <div class="act-title">
