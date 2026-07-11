@@ -81,6 +81,7 @@ class Posts(Table):
   created_at = Timestamptz(null=False)
 
 class Friends(Table):
-  haj1 = ForeignKey(references=HajInfo, target_column=HajInfo.uuid, null=True)
-  haj2 = ForeignKey(references=HajInfo, target_column=HajInfo.uuid, null=True)
+  haj1 = UUID(null=False)
+  haj2 = UUID(null=True)
   code = Varchar(length=8, unique=True, null=True)
+  created_at = Timestamptz(null=False)

@@ -3,8 +3,8 @@ import datetime
 import httpx
 import string
 import re
-from home.tables import Humans, HajInfo, NFCTable, SharkeyUsers, Posts
-from fastapi import FastAPI, HTTPException, APIRouter, Depends, Form, Request, Response, UploadFile, File
+from home.tables import Humans, HajInfo, NFCTable, SharkeyUsers, Posts, Friends
+from fastapi import FastAPI, HTTPException, APIRouter, Depends, Form, Request, Response, UploadFile, File, BackgroundTasks
 from fastapi_mail import MessageSchema, MessageType
 from piccolo.engine import engine_finder
 import uuid
@@ -13,7 +13,7 @@ from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from Crypto.Random import get_random_bytes
 import base64
-from helpers import diversify_key, decrypt_token
+from helpers import diversify_key, decrypt_token,cleanup_codes
 from config import settings, mail, s3
 from PIL import Image
 from io import BytesIO
@@ -209,6 +209,9 @@ async def post_from_form(
 
 class VerifyRequest(BaseModel):
   token: str
+
+class FriendCodeRequest(BaseModel):
+  code: Annotated[str, Field(min_length=8, max_length=8)]
 
 class RegisterRequest(BaseModel):
   username: Annotated[str, Field(min_length=3, max_length=96, pattern=r'^[a-zA-Z0-9_-]+$')]
@@ -802,6 +805,52 @@ async def get_post_image(haj_id: UUID4, post_id: UUID4, current_user = Depends(g
     )
   except Exception:
     raise HTTPException(status_code=404, detail="Image not found")
+
+
+@api.get('/hajs/{haj_id}/friends/code', tags=["Haj"])
+async def gen_friend_code(request: Request, response: Response, background_tasks: BackgroundTasks, haj_id: UUID4, current_user = Depends(get_optional_user)):
+  background_tasks.add_task(cleanup_codes)
+  user_id = current_user.id if current_user else None
+  nfc_session = request.cookies.get(str(haj_id))
+  nfc_auth = False
+  if nfc_session:
+    nfc_auth = await validate_nfc_session(str(haj_id), nfc_session)
+    if not nfc_auth:
+      response.delete_cookie(str(haj_id), **_cookie_kwargs())
+  haj = await HajInfo.objects().get(HajInfo.uuid == haj_id)
+  if haj is not None and (nfc_auth or user_id == haj["human"]):
+    found = False
+    while not found:
+      code = ''.join(str(secrets.randbelow(10)) for _ in range(8))
+      if not Friends.exists().where(Friends.code == code):
+        found = True
+        await Friends(haj1=haj.uuid, code=code).save()
+        codeformatted = code[:4] + '-' + code[4:]
+        return {'status': 'ok', 'code': codeformatted}
+  raise HTTPException(status_code=403, detail="Not authorized")
+
+
+@api.post('/hajs/{haj_id}/friends/code', response_model=HajResponse, tags=["Haj"])
+async def use_friend_code(request: Request, response: Response, req: FriendCodeRequest, background_tasks: BackgroundTasks, haj_id: UUID4, current_user = Depends(get_optional_user)):
+  background_tasks.add_task(cleanup_codes)
+  user_id = current_user.id if current_user else None
+  nfc_session = request.cookies.get(str(haj_id))
+  nfc_auth = False
+  if nfc_session:
+    nfc_auth = await validate_nfc_session(str(haj_id), nfc_session)
+    if not nfc_auth:
+      response.delete_cookie(str(haj_id), **_cookie_kwargs())
+  haj = await HajInfo.objects().get(HajInfo.uuid == haj_id)
+  if haj is not None and (nfc_auth or user_id == haj["human"]):
+    friend = await Friends.objects().get(Friends.code == req.code)
+    if friend is not None:
+      friend.haj2 = haj.uuid
+      friend.code = None
+      await friend.save()
+      who = await HajInfo.select().where(HajInfo.uuid == friend.haj1).first()
+      return {'status': 'ok', 'haj': who}
+    raise HTTPException(status_code=404, detail="Code not found, perhaps it expired?")
+  raise HTTPException(status_code=403, detail="Not authorized")
 
 @api.post('/auth/register', tags=["Auth"])
 async def register(req: RegisterRequest):

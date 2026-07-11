@@ -124,20 +124,17 @@ async def touch_session(session_id: str):
 async def validate_nfc_session(haj_id: str, session_id: str) -> bool:
     session_row = await Sessions.select().where(Sessions.session_id == session_id).where(Sessions.type == "nfc").first()
     if not session_row:
-      print("no s row")
       return False
 
     now = datetime.now(timezone.utc)
     absolute_cutoff = now - timedelta(minutes=settings.nfc_session_minutes)
 
     if session_row["created_at"] < absolute_cutoff:
-      print("nuhuh")
       await Sessions.delete().where(Sessions.id == session_row["id"])
       return False
 
     await touch_session(session_id)
     if str(haj_id).lower() == str(session_row["associated"]).lower():
-      print("yay")
       return True
     else:
       return False
