@@ -60,9 +60,6 @@
     postserror.value = err2
     loading.value = false
   })
-
-  const likes = 13292;
-  const views = 4343333;
 </script>
 
 <template>
@@ -99,7 +96,7 @@
       <h1 style="background-image: radial-gradient(circle at top left, #AD41FF 0, #682799 100%);">{{formatCompactNumber(sharkeydata.followersCount)}}</h1>
     </div>
   </div>
-  <div class="tile" :style="{ backgroundImage: `url(/api/hajs/${postdata[0]?.haj}/pfp)` }"></div>
+  <div class="tile" :style="{ backgroundImage: `url(/api/hajs/${route.params.id}/pfp)` }"></div>
   <div class="tile"></div>
   <div class="tile stat">
     <h2>Size</h2>
@@ -131,8 +128,8 @@
     <span v-if="plushdata.lastwashed != null">Last washed:</span>
     <span v-if="plushdata.lastwashed != null">{{timeAgo(plushdata.lastwashed)}}</span>
   </div>
-  <div class="tile" v-if="plushdata.mloftearsabsorbed != null">
-    <h2>mL of tears absorbed:</h2>
+  <div class="tile stat" v-if="plushdata.mloftearsabsorbed != null">
+    <h2>tears absorbed:</h2>
     <h1 style="background-image: radial-gradient(circle at top left, #418DFF 0, #275599 100%);">{{plushdata.mloftearsabsorbed}}<span style="font-size: 2rem;">mL</span></h1>
   </div>
 </div>
@@ -327,6 +324,10 @@ body {
 .tile:nth-child(9) {
   grid-column:  6;
   grid-row: 5;
+}
+
+.tile:nth-child(10) h1 {
+  font-size: 3rem;
 }
 
 .stat-pair {

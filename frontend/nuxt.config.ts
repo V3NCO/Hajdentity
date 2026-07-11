@@ -1,4 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { createResolver } from "nuxt/kit"
+const { resolve } = createResolver(import.meta.url)
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
 
@@ -29,7 +32,14 @@ export default defineNuxtConfig({
   },
 
   icon: {
-    localApiEndpoint: '/_nuxt_icon_api'
+    localApiEndpoint: '/_nuxt_icon_api',
+    customCollections: [
+      {
+        prefix: 'hajdentity',
+        dir: resolve('./app/assets/icons'),
+      },
+    ],
+
   },
 
   modules: ['@nuxt/icon'],
