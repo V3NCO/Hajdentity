@@ -10,10 +10,34 @@ const route = useRoute()
 const newMode = ref(false)
 const useMode = ref(false)
 const code = ref("")
+const newCodeDigits = ref(["", "", "", "", "", "", "", ""])
+const digitInputs = ref<(HTMLInputElement | undefined)[]>([])
+
+function onInput(e: Event, i: number) {
+  const val = (e.target as HTMLInputElement).value
+  newCodeDigits.value[i] = val.replace(/\D/g, "").slice(0, 1)
+  if (newCodeDigits.value[i] && i < 7) {
+    digitInputs.value[i + 1]?.focus()
+  }
+}
+
+function onDel(e: Event, i: number) {
+  if (!newCodeDigits.value[i] && i > 0) {
+    digitInputs.value[i - 1]?.focus()
+  }
+}
+
+function setRef(el: any, i: number) {
+  if (el) digitInputs.value[i] = el as HTMLInputElement
+}
 
 async function newCode() {
   code.value = "Loading.";
   newMode.value = true;
+  const { data: hajData, error: err } = await api.GET(
+    '/api/hajs/{haj_id}',
+    { params: { path: { haj_id: route.params.id as string } } }
+  )
 }
 
 async function useCode() {
@@ -29,14 +53,38 @@ async function useCode() {
   </div>
 </div>
 <Transition><div class="friend-pfp" :class="{ 'new-mode': newMode, 'use-mode': useMode }" :style="{ backgroundImage: `url(/api/hajs/${route.params.id}/pfp)` }"></div></Transition>
-<div v-if="useMode" class="friend-code">
-  <input type="text"
-    inputmode="numeric"
-    maxlength="8"
-    pattern="\d{8}"
-    required>
+<Transition><div v-if="useMode" class="friend-code">
+  <div class="code-inputs">
+    <input
+      v-for="(digit, i) in newCodeDigits.slice(0, 4)"
+      :key="i"
+      type="text"
+      inputmode="numeric"
+      maxlength="1"
+      pattern="\d"
+      v-model="newCodeDigits[i]"
+      @input="onInput($event, i)"
+      @keydown.backspace="onDel($event, i)"
+      :ref="(el: any) => setRef(el, i)"
+      class="code-digit"
+    />
+    <span class="code-dash">—</span>
+    <input
+      v-for="(digit, i) in newCodeDigits.slice(4)"
+      :key="i + 4"
+      type="text"
+      inputmode="numeric"
+      maxlength="1"
+      pattern="\d"
+      v-model="newCodeDigits[i + 4]"
+      @input="onInput($event, i + 4)"
+      @keydown.backspace="onDel($event, i + 4)"
+      :ref="(el: any) => setRef(el, i + 4)"
+      class="code-digit"
+    />
+  </div>
   <h1>Input Code</h1>
-</div>
+</div></Transition>
 
 <div v-if="newMode" class="friend-code">
   <span>{{code}}</span>
@@ -142,6 +190,57 @@ body {
   transform: translate(-50%, -180%);
 }
 
+.friend-code {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.friend-code h1 {
+  margin: 0;
+  font-family: "Space Grotesk";
+  font-size: 2rem;
+  font-weight: 500;
+  color: #E3E3E3;
+  pointer-events: none;
+}
+
+.code-inputs {
+  display: flex;
+  flex-direction: row;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.code-digit {
+  width: 2.5rem;
+  height: 3.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid #E3E3E3;
+  color: #E3E3E3;
+  font-family: "Space Grotesk";
+  font-size: 2rem;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.code-digit:focus {
+  border-bottom-color: #638FAC;
+}
+
+.code-dash {
+  color: #E3E3E3;
+  font-family: "Space Grotesk";
+  font-size: 2rem;
+}
+
 .button {
   flex-grow:1;
   display: grid;
@@ -168,6 +267,16 @@ body {
   align-items: center;
 }
 
+
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.8s ease-in;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+}
 
 @media screen and (max-width: 500px) {
 

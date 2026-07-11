@@ -170,6 +170,7 @@ body {
   font-family: "Space Grotesk";
   font-weight: 500;
   font-size: 1.5rem;
+  justify-content: center;
 }
 
 .button h3 {
