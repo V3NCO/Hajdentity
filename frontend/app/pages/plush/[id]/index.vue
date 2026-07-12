@@ -86,9 +86,11 @@
   <div class="tile">
     <div class="stat">
       <h2>Friends</h2>
-      <div class="friend" v-for="friend in friendsdata">
-        <div :style="{ backgroundImage: `url(/api/hajs/${friend.uuid}/pfp)` }"></div>
-        <span>{{friend.displayname}}</span>
+      <div class="friend-list">
+        <a :href="`/plush/${friend.uuid}`" class="friend" v-for="friend in friendsdata">
+          <div class="small-friend-pfp" :style="{ backgroundImage: `url(/api/hajs/${friend.uuid}/pfp)` }"></div>
+          <span class="small-friend-name">{{friend.displayname}}</span>
+        </a>
       </div>
     </div>
     <div class="stat">
@@ -143,6 +145,46 @@
 </template>
 
 <style scoped>
+.friend-list {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+  padding: 0.2rem;
+  padding-top: 3rem;
+  gap: 0.8rem;
+  overflow-y: scroll;
+}
+
+.friend {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 2.2rem;
+  padding: 0.3rem;
+  background-color: #FFBD52A0;
+  outline: 0.15rem solid #FFBD52;
+  border-radius: 9px;
+  gap: 0.5em;
+  color: #E3E3E3;
+  text-decoration: none;
+}
+
+.small-friend-name {
+  font-size: 1.3rem;
+}
+
+.small-friend-pfp {
+  box-sizing: border-box;
+  background-size: cover;
+  background-position: center;
+  height: 100%;
+  aspect-ratio: 1/1;
+  border-radius: 7px;
+}
+
 .bento {
   display: grid;
   font-family:  "Space Grotesk";
@@ -177,6 +219,7 @@
   background-color: #2D2D2D;
   height: 100%;
   width: 100%;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
