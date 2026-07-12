@@ -30,7 +30,10 @@
     return years + 'y ago'
   }
 
-  useHead({ htmlAttrs: { lang: 'en' }})
+  useHead({
+  htmlAttrs: { lang: 'en' },
+  bodyAttrs: { style: 'overflow: hidden; background-color: #212121; background-repeat: no-repeat; background-size: cover;' }
+})
   const api = useApi()
   const route = useRoute()
 
@@ -139,25 +142,7 @@
 </div>
 </template>
 
-<style>
-html, body {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  overflow: hidden;
-  background-color: #212121;
-  font-family: "Noto Sans";
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-#app, #__nuxt {
-  height: 100%;
-}
-
-
+<style scoped>
 .bento {
   display: grid;
   font-family:  "Space Grotesk";

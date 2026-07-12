@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { useApi } from '~/lib/api'
 
-useHead({ htmlAttrs: { lang: 'en' }})
+useHead({
+  htmlAttrs: { lang: 'en' },
+  bodyAttrs: { style: 'overflow: hidden; background-color: #212121; background-repeat: no-repeat; background-size: cover;' }
+})
 const api = useApi()
 const route = useRoute()
 
@@ -127,24 +130,6 @@ async function submitCode() {
 </template>
 
 <style>
-html, body {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  overflow: hidden;
-  background-color: #212121;
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-#app, #__nuxt {
-  height: 100%;
-  display: flex;
-  justify-content: center;
-}
-
 .midbotcont {
   position: fixed;
   bottom: 0rem;

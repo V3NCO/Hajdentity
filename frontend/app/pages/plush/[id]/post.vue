@@ -7,7 +7,10 @@ const dragging = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const submitting = ref(false)
 
-useHead({ htmlAttrs: { lang: 'en' }})
+useHead({
+  htmlAttrs: { lang: 'en' },
+  bodyAttrs: { style: 'overflow: hidden; background-color: #212121; background-repeat: no-repeat; background-size: cover;' }
+})
 const api = useApi()
 const route = useRoute()
 
@@ -188,24 +191,6 @@ onMounted(async () => {
 </template>
 
 <style>
-html, body {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  overflow: hidden;
-  background-color: #212121;
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-#app, #__nuxt {
-  height: 100%;
-  display: flex;
-  justify-content: center;
-}
-
 .midcont {
   display: flex;
   flex-direction: column;
@@ -216,6 +201,7 @@ body {
   box-sizing: border-box;
   gap: 3em;
   padding: 2em;
+  margin: 0 auto;
 }
 
 .act-topline {

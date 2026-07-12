@@ -100,10 +100,7 @@ useHead({
 </div>
 </template>
 
-<style>
-html, body { height: 100%; margin: 0; }
-#app, #__nuxt { height: 100%; }
-.auth-page { height: 100%; }
+<style scoped>
 .auth-page input { border-radius: 10rem; border: 2px solid #95ADB6; background-color: #C3D0D5; font-weight: 600; color: black; }
 .auth-page button { border-radius: 1rem; border: 2px solid #95ADB6; background-color: #C3D0D5; font-weight: 700; }
 .auth-page button:hover { border: 3px solid #95ADB6; background-color: #E3F0F5; }
@@ -119,12 +116,5 @@ html, body { height: 100%; margin: 0; }
 .auth-page h1 { margin: 1rem; }
 .auth-page .bigicon { font-size: 20vmin; }
 .auth-page a { border-radius: 10rem; border: 2px solid #95ADB6; background-color: #C3D0D5; font-weight: 600; padding: 0.5rem 1rem; }
-</style>
-
-<style scoped>
-@media screen and (max-width: 790px) {
-	.rcont {
-	  width: 100vw
-	}
-}
+@media screen and (max-width: 790px) { .rcont { width: 100vw } }
 </style>

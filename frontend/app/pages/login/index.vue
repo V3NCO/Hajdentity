@@ -85,9 +85,7 @@ async function onSubmit() {
 </div>
 </template>
 
-<style>
-html, body { height: 100%; margin: 0; }
-#app, #__nuxt { height: 100%; }
+<style scoped>
 input { border-radius: 10rem; border: 2px solid #95ADB6; background-color: #C3D0D5; font-weight: 600; color: black; }
 button { border-radius: 1rem; border: 2px solid #95ADB6; background-color: #C3D0D5; font-weight: 700; }
 button:hover { border: 3px solid #95ADB6; background-color: #E3F0F5; }
@@ -100,9 +98,6 @@ input:user-invalid { border: 2px solid #EF959C; background-color: #F7CACE; }
 form { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; height: 100%; }
 form input { width: 80%; height: 4%; padding: 0.25rem 0.25rem 0.25rem 2rem; }
 form button { margin-top: 1em; width: 80%; height: 2.5rem; }
-</style>
-
-<style scoped>
 p { margin: 0; }
 @media screen and (max-width: 790px) { .rcont { width: 100vw } }
 </style>

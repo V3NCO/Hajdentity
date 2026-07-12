@@ -16,7 +16,10 @@ import '~/assets/css/cards.css'
 useSeoMeta({
   title: 'New Plushie',
 })
-useHead({ htmlAttrs: { lang: 'en' } })
+useHead({
+  htmlAttrs: { lang: 'en' },
+  bodyAttrs: { style: 'overflow: hidden; font-family: "Noto Sans";' }
+})
 
 
 const state = reactive({
@@ -405,21 +408,7 @@ async function onSubmit() {
 </div>
 </template>
 
-<style>
-html, body {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  overflow: hidden;
-  font-family: "Noto Sans";
-}
-
-#app, #__nuxt {
-  height: 100%;
-}
-
+<style scoped>
 .lcont, .rcont, .vcont {
   box-sizing: border-box;
 }
