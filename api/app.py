@@ -13,7 +13,7 @@ from Crypto.Cipher import AES
 from Crypto.Hash import CMAC
 from Crypto.Random import get_random_bytes
 import base64
-from helpers import diversify_key, decrypt_token,cleanup_codes
+from helpers import diversify_key, decrypt_token,cleanup_codes, delete_user
 from config import settings, mail, s3
 from PIL import Image
 from io import BytesIO
@@ -729,7 +729,7 @@ async def get_haj_pfp(haj_id: UUID4, current_user = Depends(get_optional_user)):
 # Also: Ability to add friend plushies - it would be fun if you have to like tap a plush nfc, get a code, tap the other plush, put the code and you're friends
 # Maybe: Badges/Achievements?
 
-@api.post('/hajs/{haj_id}/posts', tags=["Haj"])
+@api.post('/hajs/{haj_id}/posts', tags=["Posts"])
 async def make_post(request: Request, response: Response, haj_id: UUID4, req: NewPostRequest = Depends(post_from_form), image: UploadFile = File(...), current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   nfc_session = request.cookies.get(str(haj_id))
@@ -805,7 +805,7 @@ async def make_post(request: Request, response: Response, haj_id: UUID4, req: Ne
     return {'status': 'ok'}
   raise HTTPException(status_code=403, detail="Not authorized")
 
-@api.get('/hajs/{haj_id}/posts', response_model=PostListResponse, tags=["Haj"])
+@api.get('/hajs/{haj_id}/posts', response_model=PostListResponse, tags=["Posts"])
 async def get_posts(haj_id: UUID4, current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
   if await check_haj_perm(user_id, haj_id):
@@ -813,7 +813,7 @@ async def get_posts(haj_id: UUID4, current_user = Depends(get_optional_user)):
     return {"status": "ok", "posts": posts}
   raise HTTPException(status_code=403, detail="Not authorized, try tapping again")
 
-@api.get('/hajs/{haj_id}/posts/{post_id}/image', tags=["Haj"])
+@api.get('/hajs/{haj_id}/posts/{post_id}/image', tags=["Posts"])
 async def get_post_image(haj_id: UUID4, post_id: UUID4, current_user = Depends(get_optional_user)):
   exists = await HajInfo.exists().where(HajInfo.uuid == haj_id)
   if not exists:
@@ -829,7 +829,7 @@ async def get_post_image(haj_id: UUID4, post_id: UUID4, current_user = Depends(g
     raise HTTPException(status_code=404, detail="Image not found")
 
 
-@api.get('/hajs/{haj_id}/friends/code', response_model=FriendCodeResponse, tags=["Haj"])
+@api.get('/hajs/{haj_id}/friends/code', response_model=FriendCodeResponse, tags=["Friends"])
 async def gen_friend_code(request: Request, response: Response, background_tasks: BackgroundTasks, haj_id: UUID4, current_user = Depends(get_optional_user)):
   background_tasks.add_task(cleanup_codes)
   user_id = current_user.id if current_user else None
@@ -851,7 +851,7 @@ async def gen_friend_code(request: Request, response: Response, background_tasks
   raise HTTPException(status_code=403, detail="Not authorized")
 
 
-@api.post('/hajs/{haj_id}/friends/code', response_model=HajResponse, tags=["Haj"])
+@api.post('/hajs/{haj_id}/friends/code', response_model=HajResponse, tags=["Friends"])
 async def use_friend_code(request: Request, response: Response, req: FriendCodeRequest, background_tasks: BackgroundTasks, haj_id: UUID4, current_user = Depends(get_optional_user)):
   background_tasks.add_task(cleanup_codes)
   user_id = current_user.id if current_user else None
@@ -896,6 +896,12 @@ async def register(req: RegisterRequest):
       await Humans.delete().where(Humans.email == req.email)
       raise HTTPException(status_code=500, detail=str(res.get('error', 'An error occured while sending you an email, please try again later.')))
   return {"status": "ok"}
+
+@api.delete('/auth/delete', tags=["Auth"])
+async def delete(res: Response, background_tasks: BackgroundTasks, current_user = Depends(get_current_active_user)):
+  background_tasks.add_task(delete_user, current_user)
+  res.status_code = 202
+  return res
 
 @api.post('/auth/new_verification_token', tags=["Auth"])
 async def new_verif_token(req: NewTokenRequest ):
