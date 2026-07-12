@@ -1,13 +1,13 @@
 export const useAuth = () => {
-  const user = useState<{ username: string; disabled: boolean } | null>('auth:user', () => null)
+  const user = useState<{ username: string; email: string; disabled: boolean } | null>('auth:user', () => null)
   const loading = useState('auth:loading', () => true)
 
   const fetchUser = async () => {
     try {
-      const res = await $fetch<{ username: string; disabled: boolean }>('/api/auth/me', {
+      const res = await $fetch<{ username: string; email: string; disabled: boolean }>('/api/auth/me', {
         credentials: 'include',
       })
-      user.value = { username: res.username, disabled: res.disabled }
+      user.value = { username: res.username, email: res.email, disabled: res.disabled }
     } catch {
       user.value = null
     } finally {

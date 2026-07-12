@@ -70,6 +70,7 @@ class SharkeySettings(BaseSettings):
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix='HAJDENTITY_',  env_nested_delimiter='__')
     master_key: MasterKey # 16 bytes AES 128 master key
+    admin_email: EmailStr # The email that people need to contact for the admin
     desfire_aid: DesfireAID = bytes.fromhex("48414A") # The application id, like its the global project
     system_id: SystemID # The ASCII bytes of the system identifier for this specific instance of the app, it shouldnt be changed to "prod", rather something describing the instance
     base_url: HttpUrl = HttpUrl("https://id.blahaj.engineering/") # The base URL

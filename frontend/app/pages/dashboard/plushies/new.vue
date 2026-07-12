@@ -13,6 +13,7 @@ const submitting = ref(false)
 import '~/assets/css/cards.css'
 
 
+definePageMeta({ middleware: 'auth', ssr: false })
 useSeoMeta({
   title: 'New Plushie',
 })

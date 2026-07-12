@@ -42,7 +42,7 @@ class VerifPayload(BaseModel):
 class User(BaseModel):
   id: UUID4
   username: str
-  public_key: str | None = None
+  email: str
   disabled: bool | None = None
   verified: bool | None = None
 

@@ -29,7 +29,7 @@ from fastapi.responses import StreamingResponse
 from scalar_fastapi import get_scalar_api_reference
 from typing import Annotated, Any
 from pydantic import Field, field_validator
-from emails import verify_mail_template
+from emails import verify_mail_template, email_change_mail_template
 from minio.deleteobjects import DeleteObject
 
 
@@ -110,6 +110,9 @@ class HajResponse(BaseModel):
   sharkeylink: str
   sharkey: dict[str, Any] | None = None
   friends: list[HajListItem] | None = None
+
+class EmailRequest(BaseModel):
+  email: str
 
 class NewHajRequest(BaseModel):
   username: Annotated[str, Field(pattern=r"^[a-z0-9_-]{3,48}$")]
@@ -961,6 +964,20 @@ async def logout(request: Request, response: Response):
 
 @api.get('/auth/me', tags=["Auth"])
 async def me(current_user = Depends(get_current_active_user)):
-  return {"username": current_user.username, "disabled": current_user.disabled}
+  return {"username": current_user.username, "email": current_user.email ,"disabled": current_user.disabled}
+
+@api.put('/auth/email', tags=["Auth"])
+async def change_email(email: EmailRequest, current_user = Depends(get_current_active_user)):
+  try:
+    print(await mail.send_message(MessageSchema(
+      recipients = [NameEmail(name=current_user.username, email=email.email), NameEmail(name=current_user.username, email=current_user.email)],
+      subject = "Hajdentity account email changed",
+      body = email_change_mail_template(str(current_user.email), str(email.email), str(current_user.username)),
+      subtype = MessageType.html
+    )))
+  except Exception:
+    raise HTTPException(status_code=500, detail='An error occured while sending you an email, please try again later.')
+  Humans.update({Humans.email: email.email}).where(Humans.email == current_user.email)
+  return {'status': 'ok'}
 
 app.include_router(api)
