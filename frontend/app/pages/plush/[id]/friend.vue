@@ -20,6 +20,7 @@ function onInput(e: Event, i: number) {
 }
 
 function onPaste(e: ClipboardEvent) {
+  e.preventDefault()
   const pasted = e.clipboardData?.getData('text') ?? ''
   const digits = pasted.replace(/\D/g, '').slice(0, 8).split('')
   for (let j = 0; j < digits.length; j++) {
@@ -55,7 +56,7 @@ async function useCode() {
 }
 
 async function submitCode() {
-  await api.POST(
+  const {error} = await api.POST(
     '/api/hajs/{haj_id}/friends/code',
     {
       params: {
@@ -66,7 +67,9 @@ async function submitCode() {
       body: { code: newCodeDigits.value.join('') }
     }
   )
-  await navigateTo(`/plush/${route.params.id}`)
+  if (error) {
+    alert(error.detail || "An error occured")
+  } else {await navigateTo(`/plush/${route.params.id}`)}
 }
 </script>
 <template>

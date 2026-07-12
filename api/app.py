@@ -214,6 +214,10 @@ class VerifyRequest(BaseModel):
 class FriendCodeRequest(BaseModel):
   code: Annotated[str, Field(min_length=8, max_length=8)]
 
+class FriendCodeResponse(BaseModel):
+  status: str
+  code: str
+
 class RegisterRequest(BaseModel):
   username: Annotated[str, Field(min_length=3, max_length=96, pattern=r'^[a-zA-Z0-9_-]+$')]
   email: EmailStr
@@ -543,7 +547,8 @@ async def haj_info(haj_id: UUID4, current_user = Depends(get_optional_user)):
           friend_uuids.append(friend['haj2'])
         else:
           friend_uuids.append(friend['haj1'])
-      friend_list = await HajInfo.select().where(HajInfo.uuid.is_in(friend_uuids))
+      if friend_uuids != []:
+        friend_list = await HajInfo.select().where(HajInfo.uuid.is_in(friend_uuids))
     response = {"status": "ok", "haj": haj}
     if sharkey is not None:
       response["sharkey"] = sharkey
@@ -823,7 +828,7 @@ async def get_post_image(haj_id: UUID4, post_id: UUID4, current_user = Depends(g
     raise HTTPException(status_code=404, detail="Image not found")
 
 
-@api.get('/hajs/{haj_id}/friends/code', tags=["Haj"])
+@api.get('/hajs/{haj_id}/friends/code', response_model=FriendCodeResponse, tags=["Haj"])
 async def gen_friend_code(request: Request, response: Response, background_tasks: BackgroundTasks, haj_id: UUID4, current_user = Depends(get_optional_user)):
   background_tasks.add_task(cleanup_codes)
   user_id = current_user.id if current_user else None
@@ -838,11 +843,10 @@ async def gen_friend_code(request: Request, response: Response, background_tasks
     found = False
     while not found:
       code = ''.join(str(secrets.randbelow(10)) for _ in range(8))
-      if not Friends.exists().where(Friends.code == code):
+      if not await Friends.exists().where(Friends.code == code):
         found = True
         await Friends(haj1=haj.uuid, code=code).save()
-        codeformatted = code[:4] + '-' + code[4:]
-        return {'status': 'ok', 'code': codeformatted}
+        return {'status': 'ok', 'code': code}
   raise HTTPException(status_code=403, detail="Not authorized")
 
 
@@ -859,12 +863,18 @@ async def use_friend_code(request: Request, response: Response, req: FriendCodeR
   haj = await HajInfo.objects().get(HajInfo.uuid == haj_id)
   if haj is not None and (nfc_auth or user_id == haj["human"]):
     friend = await Friends.objects().get(Friends.code == req.code)
-    if friend is not None:
-      friend.haj2 = haj.uuid
-      friend.code = None
-      await friend.save()
-      who = await HajInfo.select().where(HajInfo.uuid == friend.haj1).first()
-      return {'status': 'ok', 'haj': who}
+    if friend is not None and friend.haj1 != haj.uuid:
+      already_friends = await Friends.exists().where(((Friends.haj1 == haj.uuid) |  (Friends.haj2 == haj.uuid)) & ((Friends.haj1 == friend.haj1) |  (Friends.haj2 == friend.haj1)))
+      if not already_friends:
+        friend.haj2 = haj.uuid
+        friend.code = None
+        await friend.save()
+        who = await HajInfo.select().where(HajInfo.uuid == friend.haj1).first()
+        return {'status': 'ok', 'haj': who}
+      else:
+        raise HTTPException(status_code=400, detail="Youre already friends")
+    elif friend is not None and friend.haj1 == haj.uuid:
+      raise HTTPException(status_code=400, detail="You cant add yourself as a friend")
     raise HTTPException(status_code=404, detail="Code not found, perhaps it expired?")
   raise HTTPException(status_code=403, detail="Not authorized")
 
