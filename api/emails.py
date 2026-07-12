@@ -114,3 +114,54 @@ def email_change_mail_template(old_email: str, new_email: str, username: str):
 </body>
 </html>
 """
+
+
+def password_change_mail_template(username: str):
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <meta name="x-apple-disable-message-reformatting">
+</head>
+<body style="width: 100% !important; min-height: 100% !important; margin: 0px !important; padding: 0px !important; font-variant-ligatures: normal; text-rendering: optimizelegibility;">
+	<table style="table-layout: fixed; width: 100%; max-width: 600px;" border="0" cellspacing="0" cellpadding="0" role="presentation" align="center">
+		<tbody>
+			<tr>
+				<td align="center" valign="top">
+					<table style="width: 100%; max-width: 600px; padding: 56px 0; background-color: #1b1b1b;" border="0" cellspacing="0" cellpadding="0" role="presentation">
+						<tbody>
+							<tr>
+								<td valign="top" style="padding: 8px 36px;">
+									<div style="text-align:center;font-family:Arial,Helvetica,sans-serif;color:white;font-size:23px;line-height:140%;letter-spacing:-0.3px;font-weight:800;">Hajdentity</div>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+					<table style="width: 100%; max-width: 600px;" border="0" cellspacing="0" cellpadding="0" role="presentation">
+						<tbody>
+							<tr>
+								<td valign="top" align="left" style="padding: 40px; word-break: break-word; overflow-wrap: break-word;">
+									<div style="text-align:left;font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:36px;line-height:128%;letter-spacing:-0.6px;padding-bottom:16px;color:#064760;">Email changed</div>
+									<div style="padding-bottom:30px;">
+										<div style="font-size:20px;line-height:150%;letter-spacing:-0.3px;font-family:Arial,Helvetica,sans-serif;">Hey {username},</div>
+										<div style="font-size:20px;line-height:150%;letter-spacing:-0.3px;font-family:Arial,Helvetica,sans-serif;">Just letting you know that your password was just changed on Hajdentity!</div>
+									</div>
+									<div style="padding-top:30px;">
+										<div style="font-size:20px;line-height:150%;letter-spacing:-0.3px;font-family:Arial,Helvetica,sans-serif;">If you're not at the origin of this change, please email {settings.admin_email}</div>
+										<div style="font-size:20px;line-height:150%;letter-spacing:-0.3px;font-family:Arial,Helvetica,sans-serif;">See you soon!</div>
+									</div>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</body>
+</html>
+"""

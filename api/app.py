@@ -20,7 +20,7 @@ from io import BytesIO
 import secrets
 from urllib.parse import urlparse
 from auth import (
-  check_haj_perm, create_user, authenticate_user, get_current_active_user, get_optional_user,
+  check_haj_perm, create_user, authenticate_user, get_current_active_user, get_optional_user, get_password_hash,
   create_verification_token, set_nfc_cookie, verify_email_token, create_nfc_session, _cookie_kwargs,
   create_user_session, delete_session, set_session_cookie, clear_session_cookie, validate_nfc_session
 )
@@ -29,7 +29,7 @@ from fastapi.responses import StreamingResponse
 from scalar_fastapi import get_scalar_api_reference
 from typing import Annotated, Any
 from pydantic import Field, field_validator
-from emails import verify_mail_template, email_change_mail_template
+from emails import verify_mail_template, email_change_mail_template, password_change_mail_template
 from minio.deleteobjects import DeleteObject
 
 
@@ -214,6 +214,9 @@ async def post_from_form(
 
 class VerifyRequest(BaseModel):
   token: str
+
+class PasswordRequest(BaseModel):
+  password: Annotated[str, Field(min_length=16)]
 
 class FriendCodeRequest(BaseModel):
   code: Annotated[str, Field(min_length=8, max_length=8)]
@@ -977,7 +980,22 @@ async def change_email(email: EmailRequest, current_user = Depends(get_current_a
     )))
   except Exception:
     raise HTTPException(status_code=500, detail='An error occured while sending you an email, please try again later.')
-  Humans.update({Humans.email: email.email}).where(Humans.email == current_user.email)
+  Humans.update({Humans.email: email.email}).where(Humans.id == current_user.uuid)
+  return {'status': 'ok'}
+
+@api.put('/auth/password', tags=["Auth"])
+async def change_password(password: PasswordRequest, current_user = Depends(get_current_active_user)):
+  try:
+    print(await mail.send_message(MessageSchema(
+      recipients = [NameEmail(name=current_user.username, email=current_user.email)],
+      subject = "Hajdentity account password changed",
+      body = password_change_mail_template(str(current_user.username)),
+      subtype = MessageType.html
+    )))
+  except Exception:
+    raise HTTPException(status_code=500, detail='An error occured while sending you an email, please try again later.')
+  pwd = get_password_hash(password.password)
+  Humans.update({Humans.hashed_password: pwd}).where(Humans.id == current_user.uuid)
   return {'status': 'ok'}
 
 app.include_router(api)
