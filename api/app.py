@@ -584,6 +584,7 @@ async def delete_haj(haj_id: UUID4, current_user = Depends(get_current_active_us
       )
       for error in errors:
         print(f"Error deleting object: {error}")
+    await Friends.delete().where((Friends.haj1 == haj_id) | (Friends.haj2 == haj_id)).run()
     await HajInfo.delete().where(HajInfo.uuid == haj_id).run()
     return {'status': 'ok'}
   else:

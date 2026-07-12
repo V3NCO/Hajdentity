@@ -16,7 +16,7 @@ import '~/assets/css/cards.css'
 useSeoMeta({
   title: 'New Plushie',
 })
-useHead({ htmlAttrs: { lang: 'en' }, style: [{ textContent: cardsCss }] })
+useHead({ htmlAttrs: { lang: 'en' } })
 
 
 const state = reactive({
