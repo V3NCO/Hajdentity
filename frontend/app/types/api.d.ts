@@ -161,6 +161,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/hajs/{haj_id}/friends/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gen Friend Code */
+        get: operations["gen_friend_code_api_hajs__haj_id__friends_code_get"];
+        put?: never;
+        /** Use Friend Code */
+        post: operations["use_friend_code_api_hajs__haj_id__friends_code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/register": {
         parameters: {
             query?: never;
@@ -367,6 +385,18 @@ export interface components {
              */
             client_secret?: string | null;
         };
+        /** FriendCodeRequest */
+        FriendCodeRequest: {
+            /** Code */
+            code: string;
+        };
+        /** FriendCodeResponse */
+        FriendCodeResponse: {
+            /** Status */
+            status: string;
+            /** Code */
+            code: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -440,6 +470,8 @@ export interface components {
             sharkey?: {
                 [key: string]: unknown;
             } | null;
+            /** Friends */
+            friends?: components["schemas"]["HajListItem"][] | null;
         };
         /** NewTokenRequest */
         NewTokenRequest: {
@@ -475,12 +507,9 @@ export interface components {
             /** Text */
             text: string;
             /** Cw */
-            cw: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
+            cw: string | null;
+            /** Created At */
+            created_at: string | null;
         };
         /** PostListResponse */
         PostListResponse: {
@@ -921,6 +950,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gen_friend_code_api_hajs__haj_id__friends_code_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haj_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendCodeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    use_friend_code_api_hajs__haj_id__friends_code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haj_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FriendCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HajResponse"];
                 };
             };
             /** @description Validation Error */

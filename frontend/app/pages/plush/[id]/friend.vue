@@ -7,7 +7,7 @@ const route = useRoute()
 
 const newMode = ref(false)
 const useMode = ref(false)
-const code = ref("")
+const code = ref()
 const newCodeDigits = ref(["", "", "", "", "", "", "", ""])
 const digitInputs = ref<(HTMLInputElement | undefined)[]>([])
 
@@ -17,6 +17,17 @@ function onInput(e: Event, i: number) {
   if (newCodeDigits.value[i] && i < 7) {
     digitInputs.value[i + 1]?.focus()
   }
+}
+
+function onPaste(e: ClipboardEvent) {
+  const pasted = e.clipboardData?.getData('text') ?? ''
+  const digits = pasted.replace(/\D/g, '').slice(0, 8).split('')
+  for (let j = 0; j < digits.length; j++) {
+    const d = digits[j]
+    if (d) newCodeDigits.value[j] = d
+  }
+  const next = Math.min(digits.length, 7)
+  digitInputs.value[next]?.focus()
 }
 
 function onDel(e: Event, i: number) {
@@ -32,16 +43,31 @@ function setRef(el: any, i: number) {
 async function newCode() {
   code.value = "Loading.";
   newMode.value = true;
-  const { data: hajData, error: err } = await api.GET(
-    '/api/hajs/{haj_id}',
+  const { data: newcode, error: err } = await api.GET(
+    '/api/hajs/{haj_id}/friends/code',
     { params: { path: { haj_id: route.params.id as string } } }
   )
+  code.value = newcode?.code
 }
 
 async function useCode() {
   useMode.value = true;
 }
 
+async function submitCode() {
+  await api.POST(
+    '/api/hajs/{haj_id}/friends/code',
+    {
+      params: {
+        path: {
+          haj_id: route.params.id as string
+        }
+      },
+      body: { code: newCodeDigits.value.join('') }
+    }
+  )
+  await navigateTo(`/plush/${route.params.id}`)
+}
 </script>
 <template>
 <div class="friend-topline">
@@ -52,7 +78,7 @@ async function useCode() {
 </div>
 <Transition><div class="friend-pfp" :class="{ 'new-mode': newMode, 'use-mode': useMode }" :style="{ backgroundImage: `url(/api/hajs/${route.params.id}/pfp)` }"></div></Transition>
 <Transition><div v-if="useMode" class="friend-code">
-  <div class="code-inputs">
+  <div class="code-inputs" @paste="onPaste">
     <input
       v-for="(digit, i) in newCodeDigits.slice(0, 4)"
       :key="i"
@@ -85,12 +111,15 @@ async function useCode() {
 </div></Transition>
 
 <div v-if="newMode" class="friend-code">
-  <span>{{code}}</span>
+  <span>{{code.slice(0,7)}}<span style="letter-spacing: 0;">{{code.slice(7)}}</span></span>
   <h1>Friend Code</h1>
 </div>
 <div class="midbotcont" :class="{ 'new-mode': newMode, 'use-mode': useMode }">
   <button class="button" @click="newCode"><h1><Icon name="material-symbols:add" :class="{ 'new-mode': newMode, 'use-mode': useMode }"/>New Code</h1></button>
   <button class="button" @click="useCode"><h1><Icon name="material-symbols:password" :class="{ 'new-mode': newMode, 'use-mode': useMode }"/> Use Code</h1></button>
+</div>
+<div class="midbotcont use-submit" :class="{ 'use-mode': useMode }"">
+  <button class="button" @click="submitCode"><h1><Icon name="material-symbols:arrow-forward"/>Submit</h1></button>
 </div>
 </template>
 
@@ -128,6 +157,14 @@ body {
   gap: 1.5em;
   padding: 1em;
   transition: transform 0.5s ease-out;
+}
+
+.use-submit {
+  transform: translate(-50%, 100%);
+}
+
+.use-submit.use-mode {
+  transform: translate(-50%, 0%) !important;
 }
 
 .midbotcont.new-mode,
@@ -199,6 +236,13 @@ body {
   gap: 1.5rem;
 }
 
+.friend-code span {
+  font-family: "Space Grotesk";
+  font-size: 2rem;
+  color: #E3E3E3;
+  letter-spacing: 1em;
+}
+
 .friend-code h1 {
   margin: 0;
   font-family: "Space Grotesk";
@@ -234,9 +278,10 @@ body {
 }
 
 .code-dash {
-  color: #E3E3E3;
-  font-family: "Space Grotesk";
-  font-size: 2rem;
+  color: #E3E3E3 !important;
+  font-family: "Space Grotesk" !important;
+  font-size: 2rem !important;
+  letter-spacing: 0 !important;
 }
 
 .button {

@@ -41,6 +41,7 @@
   const sharkeydata = ref()
   const plusherror = ref()
   const postserror = ref()
+  const friendsdata = ref()
 
   onMounted(async () => {
     const { data: hajData, error: err } = await api.GET(
@@ -54,6 +55,7 @@
     plushdata.value = hajData?.haj
     postdata.value = postsData?.posts
     sharkeydata.value = hajData?.sharkey
+    friendsdata.value = hajData?.friends
     plusherror.value = err
     postserror.value = err2
     loading.value = false
@@ -81,6 +83,10 @@
   <div class="tile">
     <div class="stat">
       <h2>Friends</h2>
+      <div class="friend" v-for="friend in friendsdata">
+        <div :style="{ backgroundImage: `url(/api/hajs/${friend.uuid}/pfp)` }"></div>
+        <span>{{friend.displayname}}</span>
+      </div>
     </div>
     <div class="stat">
       <h2>Badges</h2>
