@@ -196,6 +196,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete */
+        delete: operations["delete_api_auth_delete_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/new_verification_token": {
         parameters: {
             query?: never;
@@ -466,6 +483,8 @@ export interface components {
             /** Status */
             status: string;
             haj: components["schemas"]["HajItem"];
+            /** Sharkeylink */
+            sharkeylink: string;
             /** Sharkey */
             sharkey?: {
                 [key: string]: unknown;
@@ -1058,6 +1077,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_api_auth_delete_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

@@ -45,6 +45,7 @@
   const plusherror = ref()
   const postserror = ref()
   const friendsdata = ref()
+  const sharkey_base = ref()
 
   onMounted(async () => {
     const { data: hajData, error: err } = await api.GET(
@@ -59,6 +60,7 @@
     postdata.value = postsData?.posts
     sharkeydata.value = hajData?.sharkey
     friendsdata.value = hajData?.friends
+    sharkey_base.value = hajData?.sharkeylink
     plusherror.value = err
     postserror.value = err2
     loading.value = false
@@ -106,7 +108,12 @@
     </div>
   </div>
   <div class="tile" :style="{ backgroundImage: `url(/api/hajs/${route.params.id}/pfp)` }"></div>
-  <div class="tile"></div>
+  <div class="tile stat-pair">
+    <span>Tap NFC to post</span>
+    <Icon class="nfc" name="material-symbols:nfc"/>
+    <span>Open in Sharkey</span>
+    <a class="sharkeybtn" :href="`${sharkey_base}@${plushdata.username}`"/>
+  </div>
   <div class="tile stat">
     <h2>Size</h2>
     <h1 style="background-image: radial-gradient(circle at top left, #FF9A41 0, #995C27 100%);">{{plushdata.size}}<span style="font-size: 2rem;">cm</span></h1>
@@ -145,6 +152,25 @@
 </template>
 
 <style scoped>
+.nfc {
+  justify-self: center;
+  align-self: center;
+  height: 6rem;
+  width: 6rem;
+}
+
+.sharkeybtn {
+  width: 100%;
+  height: 8rem;
+  background-color: #404040;
+  outline: 0.15rem solid #636363;
+  border-radius: 16px;
+  background-image: url('~/assets/image/sharkey.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
 .friend-list {
   display: flex;
   flex-direction: column;

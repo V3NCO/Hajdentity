@@ -107,6 +107,7 @@ class HajListResponse(BaseModel):
 class HajResponse(BaseModel):
   status: str
   haj: HajItem
+  sharkeylink: str
   sharkey: dict[str, Any] | None = None
   friends: list[HajListItem] | None = None
 
@@ -549,7 +550,7 @@ async def haj_info(haj_id: UUID4, current_user = Depends(get_optional_user)):
           friend_uuids.append(friend['haj1'])
       if friend_uuids != []:
         friend_list = await HajInfo.select().where(HajInfo.uuid.is_in(friend_uuids))
-    response = {"status": "ok", "haj": haj}
+    response = {"status": "ok", "haj": haj, "sharkeylink": str(settings.sharkey.base_url)}
     if sharkey is not None:
       response["sharkey"] = sharkey
     if friend_list is not None:
