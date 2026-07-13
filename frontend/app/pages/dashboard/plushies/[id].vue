@@ -12,6 +12,22 @@ const fileInput = ref<HTMLInputElement>()
 const submitting = ref(false)
 const nfc = ref()
 
+const selectedspecies = ref('haj')
+const species = ref([
+  {emoji: '🦈', label: 'Blåhaj', id: 'haj'},
+  {emoji: '🐙', label: 'Blåvingad', id: 'blavinsquid'},
+  {emoji: '🐋', label: 'Blåvingad', id: 'blavinwhale'},
+  {emoji: '🧸', label: 'Djungelskog', id: 'bearskog'},
+  {emoji: '🐒', label: 'Djungelskog', id: 'monkskog'},
+  {emoji: '🦁', label: 'Djungelskog', id: 'lionskog'},
+  {emoji: '🐝', label: 'Skogsduva', id: 'bee2bee'},
+  {emoji: '🐼', label: 'Kramig', id: 'kramig'},
+  {emoji: '👽', label: 'Aftonsparv', id: 'aftonsparv'},
+  {emoji: '🧸', label: 'Grejsimojs', id: 'grejsimojs'},
+  {emoji: '🐕', label: 'Gosig Golden', id: 'woof'},
+  {emoji: '🦛', label: 'Sandalöpare', id: 'sandalopare'}
+])
+
 useHead({
   htmlAttrs: { lang: 'en' },
   bodyAttrs: { style: 'overflow: hidden; background-color: #212121; background-repeat: no-repeat; background-size: cover;' }
@@ -103,10 +119,12 @@ async function onSubmit() {
   submitting.value = true
   fileError.value = ''
   pfpFileError.value = ''
-
+  const selected = species.value.find(s => s.id === selectedspecies.value)
   const form = new FormData()
   if (file) {form.append('image', file)}
   if (pfpFile) {form.append('pfp', pfpFile)}
+  if (selected?.emoji !== undefined && selected?.emoji !== '' ) {form.append('emoji', String(selected?.emoji))}
+  if (selected?.label !== undefined && selected?.label !== '') {form.append('species', String(selected?.label))}
 
   for (const [key, val] of Object.entries(state)) {
     if (val !== undefined && val !== '') form.append(key, String(val))
@@ -196,6 +214,7 @@ onMounted(async () => {
   plushdata.value = hajData?.haj
   nfc.value = nfcData
   plusherror.value = err
+  selectedspecies.value = String(species.value.find(s => s.label === hajData?.haj.species)?.id)
   loading.value = false
 })
 </script>
@@ -237,7 +256,19 @@ onMounted(async () => {
       />
       <label for="name">Display Name</label>
     </div>
-
+    <div class="field">
+      <select
+        id="species"
+        v-model="selectedspecies"
+      >
+        <option
+          v-for="option in species"
+          :key="option.label"
+          :value="option.id"
+        >{{option.emoji}} {{option.label}}</option>
+      </select>
+      <label for="species">Species *</label>
+    </div>
     <div class="field">
       <input
         id="date"
@@ -526,6 +557,19 @@ onMounted(async () => {
 }
 
 .posting input {
+  resize: none;
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: 12px;
+  background-color: #2D2D2D;
+  outline: 0.15rem solid #404040;
+  padding:0.7rem;
+  border: none;
+  color: #E3E3E3;
+  font-size: 1.2rem;
+}
+
+.posting select {
   resize: none;
   box-sizing: border-box;
   width: 100%;

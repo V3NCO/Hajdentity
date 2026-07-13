@@ -105,6 +105,7 @@
                 pip
 
                 pydantic-settings
+                emoji
                 piccolo
                 uvicorn
                 starlette

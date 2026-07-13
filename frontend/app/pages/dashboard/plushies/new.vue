@@ -38,6 +38,21 @@ const state = reactive({
   mloftearsabsorbed: undefined,
 })
 
+const selectedspecies = ref('haj')
+const species = ref([
+  {emoji: '🦈', label: 'Blåhaj', id: 'haj'},
+  {emoji: '🐙', label: 'Blåvingad', id: 'blavinsquid'},
+  {emoji: '🐋', label: 'Blåvingad', id: 'blavinwhale'},
+  {emoji: '🧸', label: 'Djungelskog', id: 'bearskog'},
+  {emoji: '🐒', label: 'Djungelskog', id: 'monkskog'},
+  {emoji: '🦁', label: 'Djungelskog', id: 'lionskog'},
+  {emoji: '🐝', label: 'Skogsduva', id: 'bee2bee'},
+  {emoji: '🐼', label: 'Kramig', id: 'kramig'},
+  {emoji: '👽', label: 'Aftonsparv', id: 'aftonsparv'},
+  {emoji: '🧸', label: 'Grejsimojs', id: 'grejsimojs'},
+  {emoji: '🐕', label: 'Gosig Golden', id: 'woof'},
+  {emoji: '🦛', label: 'Sandalöpare', id: 'sandalopare'}
+])
 
 function onKeydown(e: KeyboardEvent) {
   buffer += e.key.toLowerCase()
@@ -157,6 +172,8 @@ async function onSubmit() {
     return
   }
 
+  const selected = species.value.find(s => s.id === selectedspecies.value)
+
   submitting.value = true
   fileError.value = ''
   pfpFileError.value = ''
@@ -164,6 +181,12 @@ async function onSubmit() {
   const form = new FormData()
   form.append('image', file)
   form.append('pfp', pfpFile)
+  if (selected?.emoji == undefined && selected?.emoji == '' || selected?.label == undefined && selected?.label == '') {
+    fileError.value = 'emoji and species cant be empty, select a correct species in the selector'
+    return
+  }
+  form.append('emoji', String(selected?.emoji))
+  form.append('species', String(selected?.label))
   for (const [key, val] of Object.entries(state)) {
     if (val !== undefined && val !== '') form.append(key, String(val))
   }
@@ -219,7 +242,20 @@ async function onSubmit() {
         />
         <label for="name">Display Name *</label>
       </div>
-
+      <div class="field">
+        <select
+          id="species"
+          v-model="selectedspecies"
+          required
+        >
+          <option
+            v-for="option in species"
+            :key="option.label"
+            :value="option.id"
+          >{{option.emoji}} {{option.label}}</option>
+        </select>
+        <label for="species">Species *</label>
+      </div>
       <div class="half">
         <div class="field">
           <input
@@ -454,6 +490,7 @@ h1 {
 }
 
 input,
+select,
 textarea {
   border-radius: 1rem;
   border: 2px solid #95ADB6;
@@ -475,6 +512,7 @@ form {
 }
 
 .field input,
+.field select,
 .field textarea{
   height: 3rem;
   width: 100%;
@@ -517,6 +555,8 @@ form {
 
 .field input:focus + label,
 .field input:not(:placeholder-shown) + label,
+.field select:focus + label,
+.field select:not(:placeholder-shown) + label,
 .field textarea:focus + label,
 .field textarea:not(:placeholder-shown) + label{
   top: 0.7rem;

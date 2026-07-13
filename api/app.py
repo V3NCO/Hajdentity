@@ -3,6 +3,7 @@ import datetime
 import httpx
 import string
 import re
+import emoji
 from home.tables import Humans, HajInfo, NFCTable, SharkeyUsers, Posts, Friends
 from fastapi import FastAPI, HTTPException, APIRouter, Depends, Form, Request, Response, UploadFile, File, BackgroundTasks
 from fastapi_mail import MessageSchema, MessageType
@@ -84,6 +85,8 @@ class HajItem(BaseModel):
   uuid: UUID4
   human: UUID4
   displayname: str
+  emoji: str
+  species: str
   username: str
   date: datetime.date
   size: int
@@ -143,6 +146,22 @@ class NewHajRequest(BaseModel):
   squish: Annotated[int, Field(ge=1, le=10)] | None = None
   lastwashed: datetime.datetime | None = None
   mloftearsabsorbed: float | None = None
+  emoji: Annotated[str, Field(min_length=1, max_length=8)]
+  species: Annotated[str, Field(min_length=1, max_length=64)]
+
+  @field_validator('emoji')
+  @classmethod
+  def single_emoji(cls, v: str) -> str:
+    if not emoji.is_emoji(v):
+      raise ValueError(f'Not an emoji: {v}')
+    return v
+
+  @field_validator('species')
+  @classmethod
+  def species_validator(cls, v: str) -> str:
+    if emoji.emoji_count(v) != 0:
+      raise ValueError(f'Species cant contain emojis: {v}')
+    return v
 
   @field_validator("displayname", mode="before")
   @classmethod
@@ -164,6 +183,8 @@ class PatchHajRequest(BaseModel):
   squish: Annotated[int, Field(ge=1, le=10)] | None = None
   lastwashed: datetime.datetime | None = None
   mloftearsabsorbed: float | None = None
+  emoji: Annotated[str, Field(min_length=1, max_length=8)] | None = None
+  species: Annotated[str, Field(min_length=1, max_length=64)] | None = None
 
   @field_validator("displayname", mode="before")
   @classmethod
@@ -177,6 +198,8 @@ class PatchHajRequest(BaseModel):
     return cleaned
 
 def patch_from_form(
+  emoji: Annotated[str | None, Form(min_length=1, max_length=8)] = None,
+  species: Annotated[str | None, Form(min_length=1, max_length=64)] = None,
   displayname: Annotated[str | None, Form(min_length=1, max_length=48)] = None,
   date: Annotated[datetime.date | None, Form()] = None,
   size: Annotated[float | None, Form()] = None,
@@ -193,7 +216,7 @@ def patch_from_form(
     displayname=displayname, date=date, size=size,
     location=location, description=description, pronouns=pronouns,
     gender=gender, floof=floof, squish=squish, lastwashed=lastwashed,
-    mloftearsabsorbed=mloftearsabsorbed
+    mloftearsabsorbed=mloftearsabsorbed, emoji=emoji, species=species
   )
 
 def haj_from_form(
@@ -202,6 +225,8 @@ def haj_from_form(
   date: Annotated[datetime.date, Form()],
   size: Annotated[float, Form()],
   description: Annotated[str, Form()],
+  emoji: Annotated[str, Field(min_length=1, max_length=8)],
+  species: Annotated[str, Field(min_length=1, max_length=64)],
   location: Annotated[str | None, Form()] = None,
   pronouns: Annotated[str | None, Form(max_length=32)] = None,
   gender: Annotated[str | None, Form(max_length=96)] = None,
@@ -211,7 +236,7 @@ def haj_from_form(
   mloftearsabsorbed: Annotated[float | None, Form()] = None,
 ) -> NewHajRequest:
   return NewHajRequest(
-    displayname=displayname,username=username, date=date, size=size,
+    emoji=emoji, species=species, displayname=displayname,username=username, date=date, size=size,
     location=location, description=description, pronouns=pronouns,
     gender=gender, floof=floof, squish=squish, lastwashed=lastwashed,
     mloftearsabsorbed=mloftearsabsorbed
@@ -404,7 +429,7 @@ async def add_haj(
   try:
     if await HajInfo.exists().where(HajInfo.username == req.username):
       raise HTTPException(status_code=400, detail="Username taken")
-    await HajInfo( uuid=haj_id, human=current_user.id, displayname=req.displayname, username=req.username, date=req.date, size = req.size, location = req.location,
+    await HajInfo( uuid=haj_id, human=current_user.id, displayname=req.displayname, emoji=req.emoji, species=req.species, username=req.username, date=req.date, size = req.size, location = req.location,
       description = req.description, pronouns = req.pronouns, gender = req.gender, floof = req.floof, squish = req.squish, lastwashed = req.lastwashed, mloftearsabsorbed= req.mloftearsabsorbed
     ).save()
     try:
@@ -492,6 +517,7 @@ async def add_haj(
     if pronouns_gender:
       parts.append(pronouns_gender)
     parts.append(req.description)
+    parts.append(f"{req.emoji} {req.species}")
     if req.size:
       parts.append(f"📏 {req.size}cm")
     if req.floof:
@@ -653,6 +679,8 @@ async def patch_haj(
       ).items()
       if value is not None
     }
+    print(req)
+    print(update_data)
     if update_data:
       column_map = {
         "displayname": HajInfo.displayname,
@@ -666,6 +694,8 @@ async def patch_haj(
         "squish": HajInfo.squish,
         "lastwashed": HajInfo.lastwashed,
         "mloftearsabsorbed": HajInfo.mloftearsabsorbed,
+        "species": HajInfo.species,
+        "emoji": HajInfo.emoji
       }
       await haj.update_self({column_map[k]: v for k, v in update_data.items() if k in column_map})
     if image is not None:
@@ -722,6 +752,7 @@ async def patch_haj(
         pronouns_gender = f"{haj.pronouns} - {haj.gender}" if haj.pronouns and haj.gender else (haj.pronouns or haj.gender or None)
         if pronouns_gender:
           parts.append(pronouns_gender)
+        parts.append(f"{haj.emoji} {haj.species}")
         parts.append(haj.description)
         if haj.size:
           parts.append(f"📏 {haj.size}cm")

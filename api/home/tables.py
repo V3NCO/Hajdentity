@@ -44,6 +44,8 @@ class HajInfo(Table):
   floof = Integer(null=True)
   squish = Integer(null=True)
   lastwashed = Timestamptz(null=True)
+  emoji = Varchar(8,null=False)
+  species = Varchar(255,null=False)
   mloftearsabsorbed = Numeric(null=True)
 
 

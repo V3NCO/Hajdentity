@@ -109,8 +109,9 @@
   </div>
   <div class="tile" :style="{ backgroundImage: `url(/api/hajs/${route.params.id}/pfp)` }"></div>
   <div class="tile stat-pair">
-    <span>Tap NFC to post</span>
-    <Icon class="nfc" name="material-symbols:nfc"/>
+
+    <span class="speciesicon">{{plushdata.emoji}}</span>
+    <span style="justify-self: center;">{{plushdata.species}}</span>
     <span>Open in Sharkey</span>
     <a class="sharkeybtn" :href="`${sharkey_base}@${plushdata.username}`"/>
   </div>
@@ -152,11 +153,12 @@
 </template>
 
 <style scoped>
-.nfc {
+.speciesicon {
   justify-self: center;
   align-self: center;
   height: 6rem;
   width: 6rem;
+  font-size: 5rem;
 }
 
 .sharkeybtn {

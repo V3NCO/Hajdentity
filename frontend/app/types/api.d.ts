@@ -489,6 +489,10 @@ export interface components {
             human: string;
             /** Displayname */
             displayname: string;
+            /** Emoji */
+            emoji: string;
+            /** Species */
+            species: string;
             /** Username */
             username: string;
             /**
@@ -812,7 +816,10 @@ export interface operations {
     };
     add_haj_api_hajs_post: {
         parameters: {
-            query?: never;
+            query: {
+                emoji: string;
+                species: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
