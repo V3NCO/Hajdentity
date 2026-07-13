@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/nfc/{haj_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check Nfc */
+        get: operations["check_nfc_api_nfc__haj_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/hajs": {
         parameters: {
             query?: never;
@@ -298,6 +315,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change Email */
+        put: operations["change_email_api_auth_email_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change Password */
+        put: operations["change_password_api_auth_password_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -402,6 +453,11 @@ export interface components {
              */
             client_secret?: string | null;
         };
+        /** EmailRequest */
+        EmailRequest: {
+            /** Email */
+            email: string;
+        };
         /** FriendCodeRequest */
         FriendCodeRequest: {
             /** Code */
@@ -500,12 +556,43 @@ export interface components {
              */
             email: string;
         };
+        /** NfcInfoResponse */
+        NfcInfoResponse: {
+            /** Is Setup */
+            is_setup: boolean;
+            /** Uid */
+            uid?: string | null;
+            /** Counter */
+            counter?: number | null;
+        };
+        /** NfcInserted */
+        NfcInserted: {
+            /** Haj Id */
+            haj_id: string;
+            /** Key0 */
+            key0: string;
+            /** Key3 */
+            key3: string;
+            /** Key4 */
+            key4: string;
+        };
         /** NfcRequest */
         NfcRequest: {
             /** Picc Data */
             picc_data: string;
             /** Cmac */
             cmac: string;
+        };
+        /** NfcResponse */
+        NfcResponse: {
+            /** Status */
+            status: string;
+            inserted: components["schemas"]["NfcInserted"];
+        };
+        /** PasswordRequest */
+        PasswordRequest: {
+            /** Password */
+            password: string;
         };
         /** PostListItem */
         PostListItem: {
@@ -658,7 +745,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["NfcResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_nfc_api_nfc__haj_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haj_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NfcInfoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1236,6 +1354,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    change_email_api_auth_email_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_api_auth_password_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -104,6 +104,22 @@ class HajListResponse(BaseModel):
   status: str
   hajs: list[HajListItem]
 
+class NfcInfoResponse(BaseModel):
+  is_setup: bool
+  uid: str | None = None
+  counter: int | None = None
+
+
+class NfcInserted(BaseModel):
+  haj_id: str
+  key0: str
+  key3: str
+  key4: str
+
+class NfcResponse(BaseModel):
+  status: str
+  inserted: NfcInserted
+
 class HajResponse(BaseModel):
   status: str
   haj: HajItem
@@ -319,7 +335,7 @@ async def nfc_auth(response: Response, request: Request, tap: NfcRequest):
 
   return {'status': 'ok', 'haj': tag.haj_id}
 
-@api.post('/nfc/provision', tags=["NFC"])
+@api.post('/nfc/provision', response_model=NfcResponse, tags=["NFC"])
 async def provision(req: ProvisionRequest, current_user = Depends(get_current_active_user)):
   exists = await HajInfo.exists().where(
       HajInfo.uuid == req.haj_id,
@@ -338,21 +354,40 @@ async def provision(req: ProvisionRequest, current_user = Depends(get_current_ac
     if existing:
       raise HTTPException(status_code=403, detail="This tag uid already exists, please contact the admin if it's an issue for you")
 
+    haj_assigned = await NFCTable.exists().where(NFCTable.haj_id == req.haj_id)
+    if haj_assigned:
+      raise HTTPException(status_code=403, detail="This haj already has a tag assigned")
+
+
     tag = NFCTable(uid=tag_id.hex(), haj_id=req.haj_id, key0=key0.hex(), key4=key4.hex(), status="active", created_at = datetime.datetime.now())
     await tag.save()
 
     return {
       "status": "ok",
       "inserted": {
-        "haj_id": req.haj_id,
-        "key0": key0.hex(),
-        "key3": key3.hex(),
-        "key4": key4.hex()
+        "haj_id": str(req.haj_id),
+        "key0": str(key0.hex()),
+        "key3": str(key3.hex()),
+        "key4": str(key4.hex())
       }
     }
   else:
     raise HTTPException(401, "This blahaj is either not yours or doesn't exist.")
 
+@api.get('/nfc/{haj_id}', response_model=NfcInfoResponse ,tags=["NFC"])
+async def check_nfc(haj_id: str, current_user = Depends(get_current_active_user)):
+  exists = await HajInfo.exists().where(
+      HajInfo.uuid == haj_id,
+      HajInfo.human == current_user.id,
+  )
+  if exists:
+    nfc = await NFCTable.objects().get(NFCTable.haj_id == haj_id)
+    if nfc is None:
+      return {'is_setup': False}
+    else:
+      return {'is_setup': True, 'uid': nfc.uid, 'counter': nfc.last_counter}
+  else:
+    raise HTTPException(401, "This blahaj is either not yours or doesn't exist.")
 
 @api.post('/hajs', tags=["Haj"])
 async def add_haj(
