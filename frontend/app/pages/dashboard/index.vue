@@ -52,7 +52,7 @@ async function onDelete() {
   <div class="sidebar">
     <a href="#"><Icon class="beeg" name="material-symbols:account-circle"/></a>
     <hr/>
-    <a href="plushies"><Icon class="beeg" name="hajdentity:haj"/></a>
+    <a href="/dashboard/plushies"><Icon class="beeg" name="hajdentity:haj"/></a>
   </div>
 </div>
 <div class="rightcont">

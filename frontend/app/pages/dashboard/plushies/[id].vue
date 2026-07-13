@@ -112,19 +112,19 @@ async function onSubmit() {
     if (val !== undefined && val !== '') form.append(key, String(val))
   }
 
-  try {
-    const res = await $fetch('/api/hajs', {
-      method: 'PATCH',
-      body: form,
-      credentials: 'include'
+  const {data, error} = await api.PATCH('/api/hajs/{haj_id}',
+    {
+      params: {
+        path: {
+          haj_id: route.params.id as string
+        }
+      },
+      body: form
     })
-    console.log(res)
-    submitting.value = false
-    await navigateTo('/dashboard/plushies')
-  } catch (e: any) {
-    fileError.value = e?.data?.detail || 'Upload failed'
-    submitting.value = false
-  }
+
+  console.log(data)
+  submitting.value = false
+  await navigateTo('/dashboard/plushies')
 }
 
 function getPfpFile(file: File) {
@@ -367,7 +367,6 @@ onMounted(async () => {
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         @change="onFileChange"
-        required
       />
       <label for="image">Click or Drag here</label>
       <p class="imgrec">(Max 10MB, PNG, JPEG, WEBP and GIF supported, 4:3 or 1:2 recommended)</p>
@@ -391,7 +390,6 @@ onMounted(async () => {
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         @change="onPfpFileChange"
-        required
       />
       <label for="pfp">Click or Drag here</label>
       <p class="imgrec">(Max 10MB, 1:1 square aspect ratio required for profile pic)</p>

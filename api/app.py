@@ -167,10 +167,13 @@ class PatchHajRequest(BaseModel):
 
   @field_validator("displayname", mode="before")
   @classmethod
-  def clean_displayname(cls, v: str) -> str:
-    cleaned = v.strip()
-    if not cleaned:
-      raise ValueError("Display name cannot be blank")
+  def clean_displayname(cls, v: str | None) -> str | None:
+    if v is not None:
+      cleaned = v.strip()
+      if not cleaned:
+        raise ValueError("Display name cannot be blank")
+    else:
+      cleaned = None
     return cleaned
 
 def patch_from_form(
@@ -651,7 +654,20 @@ async def patch_haj(
       if value is not None
     }
     if update_data:
-      await haj.update_self(**update_data)
+      column_map = {
+        "displayname": HajInfo.displayname,
+        "date": HajInfo.date,
+        "size": HajInfo.size,
+        "location": HajInfo.location,
+        "description": HajInfo.description,
+        "pronouns": HajInfo.pronouns,
+        "gender": HajInfo.gender,
+        "floof": HajInfo.floof,
+        "squish": HajInfo.squish,
+        "lastwashed": HajInfo.lastwashed,
+        "mloftearsabsorbed": HajInfo.mloftearsabsorbed,
+      }
+      await haj.update_self({column_map[k]: v for k, v in update_data.items() if k in column_map})
     if image is not None:
       try:
         img = Image.open(image.file)
