@@ -22,22 +22,6 @@ useHead({
   bodyAttrs: { style: 'overflow: hidden; font-family: "Noto Sans";' }
 })
 
-
-const state = reactive({
-  displayname: undefined,
-  username: undefined,
-  date: undefined,
-  size: undefined,
-  description: undefined,
-  location: undefined,
-  gender: undefined,
-  pronouns: undefined,
-  lastwashed: undefined,
-  floof: undefined,
-  squish: undefined,
-  mloftearsabsorbed: undefined,
-})
-
 const selectedspecies = ref('haj')
 const species = ref([
   {emoji: '🦈', label: 'Blåhaj', id: 'haj'},
@@ -53,6 +37,23 @@ const species = ref([
   {emoji: '🐕', label: 'Gosig Golden', id: 'woof'},
   {emoji: '🦛', label: 'Sandalöpare', id: 'sandalopare'}
 ])
+
+const state = reactive({
+  displayname: undefined,
+  username: undefined,
+  date: undefined,
+  size: undefined,
+  description: undefined,
+  location: undefined,
+  gender: undefined,
+  pronouns: undefined,
+  lastwashed: undefined,
+  floof: undefined,
+  squish: undefined,
+  mloftearsabsorbed: undefined,
+  species: computed(() => species.value.find(s => s.id === selectedspecies.value)?.label),
+  emoji: computed(() => species.value.find(s => s.id === selectedspecies.value)?.emoji)
+})
 
 function onKeydown(e: KeyboardEvent) {
   buffer += e.key.toLowerCase()
@@ -172,8 +173,6 @@ async function onSubmit() {
     return
   }
 
-  const selected = species.value.find(s => s.id === selectedspecies.value)
-
   submitting.value = true
   fileError.value = ''
   pfpFileError.value = ''
@@ -181,12 +180,6 @@ async function onSubmit() {
   const form = new FormData()
   form.append('image', file)
   form.append('pfp', pfpFile)
-  if (selected?.emoji == undefined && selected?.emoji == '' || selected?.label == undefined && selected?.label == '') {
-    fileError.value = 'emoji and species cant be empty, select a correct species in the selector'
-    return
-  }
-  form.append('emoji', String(selected?.emoji))
-  form.append('species', String(selected?.label))
   for (const [key, val] of Object.entries(state)) {
     if (val !== undefined && val !== '') form.append(key, String(val))
   }

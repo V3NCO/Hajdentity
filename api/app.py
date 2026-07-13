@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 from auth import (
   check_haj_perm, create_user, authenticate_user, get_current_active_user, get_optional_user, get_password_hash,
   create_verification_token, set_nfc_cookie, verify_email_token, create_nfc_session, _cookie_kwargs,
-  create_user_session, delete_session, set_session_cookie, clear_session_cookie, validate_nfc_session
+  create_user_session, delete_session, set_session_cookie, clear_session_cookie, validate_nfc_session, verify_password
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import StreamingResponse
@@ -32,6 +32,11 @@ from typing import Annotated, Any
 from pydantic import Field, field_validator
 from emails import verify_mail_template, email_change_mail_template, password_change_mail_template
 from minio.deleteobjects import DeleteObject
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 
 async def open_database_connection_pool():
@@ -64,8 +69,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 api = APIRouter(prefix="/api")
-client = httpx.AsyncClient()
+client = httpx.AsyncClient(timeout=30.0)
 
 class PostListItem(BaseModel):
   id: UUID4
@@ -131,11 +138,13 @@ class HajResponse(BaseModel):
   friends: list[HajListItem] | None = None
 
 class EmailRequest(BaseModel):
-  email: str
+  email: EmailStr
 
 class NewHajRequest(BaseModel):
   username: Annotated[str, Field(pattern=r"^[a-z0-9_-]{3,48}$")]
   displayname: Annotated[str, Field(min_length=1, max_length=48)]
+  emoji: Annotated[str, Field(min_length=1, max_length=8)]
+  species: Annotated[str, Field(min_length=1, max_length=64)]
   date: datetime.date
   size: float
   location: str | None = None
@@ -146,8 +155,6 @@ class NewHajRequest(BaseModel):
   squish: Annotated[int, Field(ge=1, le=10)] | None = None
   lastwashed: datetime.datetime | None = None
   mloftearsabsorbed: float | None = None
-  emoji: Annotated[str, Field(min_length=1, max_length=8)]
-  species: Annotated[str, Field(min_length=1, max_length=64)]
 
   @field_validator('emoji')
   @classmethod
@@ -225,8 +232,8 @@ def haj_from_form(
   date: Annotated[datetime.date, Form()],
   size: Annotated[float, Form()],
   description: Annotated[str, Form()],
-  emoji: Annotated[str, Field(min_length=1, max_length=8)],
-  species: Annotated[str, Field(min_length=1, max_length=64)],
+  emoji: Annotated[str, Form(min_length=1, max_length=8)],
+  species: Annotated[str, Form(min_length=1, max_length=64)],
   location: Annotated[str | None, Form()] = None,
   pronouns: Annotated[str | None, Form(max_length=32)] = None,
   gender: Annotated[str | None, Form(max_length=96)] = None,
@@ -318,6 +325,7 @@ async def scalar_html():
   )
 
 @api.post("/nfc/auth", tags=["NFC"])
+@limiter.limit("10/minute")
 async def nfc_auth(response: Response, request: Request, tap: NfcRequest):
   picc_bytes = bytes.fromhex(tap.picc_data)
   iv = b'\x00' * 16
@@ -679,8 +687,6 @@ async def patch_haj(
       ).items()
       if value is not None
     }
-    print(req)
-    print(update_data)
     if update_data:
       column_map = {
         "displayname": HajInfo.displayname,
@@ -960,7 +966,7 @@ async def use_friend_code(request: Request, response: Response, req: FriendCodeR
         friend.code = None
         await friend.save()
         who = await HajInfo.select().where(HajInfo.uuid == friend.haj1).first()
-        return {'status': 'ok', 'haj': who}
+        return {'status': 'ok', 'haj': who, 'sharkeylink': str(settings.sharkey.base_url)}
       else:
         raise HTTPException(status_code=400, detail="Youre already friends")
     elif friend is not None and friend.haj1 == haj.uuid:
@@ -969,7 +975,8 @@ async def use_friend_code(request: Request, response: Response, req: FriendCodeR
   raise HTTPException(status_code=403, detail="Not authorized")
 
 @api.post('/auth/register', tags=["Auth"])
-async def register(req: RegisterRequest):
+@limiter.limit("3/minute")
+async def register(req: RegisterRequest, request: Request):
   res = await create_user(req)
   if not res.get('ok'):
     raise HTTPException(status_code=400, detail=str(res.get('error', 'unknown')))
@@ -993,9 +1000,12 @@ async def delete(res: Response, background_tasks: BackgroundTasks, current_user 
   return res
 
 @api.post('/auth/new_verification_token', tags=["Auth"])
-async def new_verif_token(req: NewTokenRequest ):
+@limiter.limit("3/minute")
+async def new_verif_token(req: NewTokenRequest, request: Request):
   human = await Humans.objects().get(Humans.email == req.email)
-  if human is not None and not human.verified:
+  if human is not None:
+    if human.verified:
+      return {"status": "ok"}
     try:
       jwt = create_verification_token(req.email)
       await mail.send_message(MessageSchema(
@@ -1025,6 +1035,7 @@ async def verify(req: VerifyRequest):
   raise HTTPException(status_code=404, detail="This account does not exist")
 
 @api.post('/auth/token', tags=["Auth"])
+@limiter.limit("10/minute")
 async def token(response: Response, request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
   user = await authenticate_user(form_data.username, form_data.password)
   if not user:
@@ -1054,30 +1065,30 @@ async def me(current_user = Depends(get_current_active_user)):
 @api.put('/auth/email', tags=["Auth"])
 async def change_email(email: EmailRequest, current_user = Depends(get_current_active_user)):
   try:
-    print(await mail.send_message(MessageSchema(
+    await mail.send_message(MessageSchema(
       recipients = [NameEmail(name=current_user.username, email=email.email), NameEmail(name=current_user.username, email=current_user.email)],
       subject = "Hajdentity account email changed",
       body = email_change_mail_template(str(current_user.email), str(email.email), str(current_user.username)),
       subtype = MessageType.html
-    )))
+    ))
   except Exception:
     raise HTTPException(status_code=500, detail='An error occured while sending you an email, please try again later.')
-  Humans.update({Humans.email: email.email}).where(Humans.id == current_user.uuid)
+  await Humans.update({Humans.email: email.email}).where(Humans.id == current_user.id)
   return {'status': 'ok'}
 
 @api.put('/auth/password', tags=["Auth"])
 async def change_password(password: PasswordRequest, current_user = Depends(get_current_active_user)):
   try:
-    print(await mail.send_message(MessageSchema(
+    await mail.send_message(MessageSchema(
       recipients = [NameEmail(name=current_user.username, email=current_user.email)],
       subject = "Hajdentity account password changed",
       body = password_change_mail_template(str(current_user.username)),
       subtype = MessageType.html
-    )))
+    ))
   except Exception:
     raise HTTPException(status_code=500, detail='An error occured while sending you an email, please try again later.')
   pwd = get_password_hash(password.password)
-  Humans.update({Humans.hashed_password: pwd}).where(Humans.id == current_user.uuid)
+  await Humans.update({Humans.hashed_password: pwd}).where(Humans.id == current_user.id)
   return {'status': 'ok'}
 
 app.include_router(api)
