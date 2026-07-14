@@ -66,7 +66,8 @@ export interface paths {
         get: operations["check_nfc_api_nfc__haj_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Nfc */
+        delete: operations["delete_nfc_api_nfc__haj_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -372,6 +373,10 @@ export interface components {
             size: number;
             /** Description */
             description: string;
+            /** Emoji */
+            emoji: string;
+            /** Species */
+            species: string;
             /** Location */
             location?: string | null;
             /** Pronouns */
@@ -406,6 +411,10 @@ export interface components {
             image?: string | null;
             /** Pfp */
             pfp?: string | null;
+            /** Emoji */
+            emoji?: string | null;
+            /** Species */
+            species?: string | null;
             /** Displayname */
             displayname?: string | null;
             /** Date */
@@ -455,7 +464,10 @@ export interface components {
         };
         /** EmailRequest */
         EmailRequest: {
-            /** Email */
+            /**
+             * Email
+             * Format: email
+             */
             email: string;
         };
         /** FriendCodeRequest */
@@ -794,6 +806,37 @@ export interface operations {
             };
         };
     };
+    delete_nfc_api_nfc__haj_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                haj_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NfcInfoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_hajs_api_hajs_get: {
         parameters: {
             query?: never;
@@ -816,10 +859,7 @@ export interface operations {
     };
     add_haj_api_hajs_post: {
         parameters: {
-            query: {
-                emoji: string;
-                species: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;

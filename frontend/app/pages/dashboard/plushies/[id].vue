@@ -198,8 +198,27 @@ function onPfpDrop(e: DragEvent) {
   getPfpFile(file)
 }
 
-function onNFC() {
+async function onNFC() {
   navigateTo(`/dashboard/plushies/nfc?haj=${route.params.id}`)
+}
+
+async function delNFC() {
+  await api.DELETE('/api/nfc/{haj_id}',
+    {
+      params: {
+        path: {
+          haj_id: route.params.id as string
+        }
+      },
+    }
+  )
+}
+
+async function delHaj() {
+  await api.DELETE(
+    '/api/hajs/{haj_id}',
+    { params: { path: { haj_id: route.params.id as string } } }
+  )
 }
 
 onMounted(async () => {
@@ -242,6 +261,12 @@ onMounted(async () => {
     </p>
     <button @click="onNFC" class="button"><h3>Setup NFC</h3></button>
   </div>
+  <button v-else @click="delNFC" class="button del">
+    <h1><Icon name="material-symbols:nfc"/>Delete NFC</h1>
+  </button>
+  <button @click="delHaj" class="button del">
+    <h1><Icon name="hajdentity:haj"/>Delete Plush</h1>
+  </button>
   <form class="posting" @keydown="onKeydown" @submit.prevent="onSubmit">
     <div class="field">
       <input
@@ -449,6 +474,21 @@ onMounted(async () => {
   text-align: center;
   gap: 0.2em;
 }
+
+.button h1 {
+  margin: 0;
+  display: flex;
+  gap: 0.3em;
+  align-items: center;
+}
+
+.del {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #EE4444A0;
+  outline: 0.15rem dashed #EE4444;
+}
+
 
 .button:hover {
   outline: 0.15rem solid #636363;

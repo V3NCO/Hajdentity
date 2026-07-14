@@ -425,6 +425,19 @@ async def check_nfc(haj_id: str, current_user = Depends(get_current_active_user)
   else:
     raise HTTPException(401, "This blahaj is either not yours or doesn't exist.")
 
+@api.delete('/nfc/{haj_id}', response_model=NfcInfoResponse ,tags=["NFC"])
+async def delete_nfc(haj_id: str, current_user = Depends(get_current_active_user)):
+  exists = await HajInfo.exists().where(
+      HajInfo.uuid == haj_id,
+      HajInfo.human == current_user.id,
+  )
+  if exists:
+    nfc = await NFCTable.objects().get(NFCTable.haj_id == haj_id)
+    if nfc is not None:
+      await nfc.remove()
+  else:
+    raise HTTPException(401, "This blahaj is either not yours or doesn't exist.")
+
 @api.post('/hajs', tags=["Haj"])
 async def add_haj(
   req: NewHajRequest = Depends(haj_from_form),

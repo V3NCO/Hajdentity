@@ -44,6 +44,15 @@ async function onDelete() {
     alert((e as any)?.response?._data?.detail || (e as any)?.data?.detail || 'Deletion... Failed? Contact the administrator')
   }
 }
+
+async function onLogout() {
+  try {
+    await $fetch("/api/auth/logout", { method: 'POST', credentials: 'include' })
+    alert('Logged out. Your session is now invalid, you can refresh.')
+  } catch (e) {
+    alert((e as any)?.response?._data?.detail || (e as any)?.data?.detail || 'Logout... Failed? Contact the administrator')
+  }
+}
 </script>
 
 
@@ -84,7 +93,9 @@ async function onDelete() {
         <button type="submit"><h3>Submit</h3></button>
       </div>
     </form>
-
+    <div class="field">
+      <button @click="onLogout" name="logout"><h3>Logout</h3></button>
+    </div>
     <div class="danger-zone">
       <span>WARNING: This will INSTANTLY delete your account, no warning, no nothing. All of your data will be gone and unrecoverable.</span>
       <button @click="onDelete"><h3>Delete account</h3></button>
