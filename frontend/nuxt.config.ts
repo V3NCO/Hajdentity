@@ -2,6 +2,8 @@
 import { createResolver } from "nuxt/kit"
 const { resolve } = createResolver(import.meta.url)
 
+const apiProxyTarget = (globalThis as any).process?.env?.NUXT_API_PROXY_TARGET || 'http://127.0.0.1:8000'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   css: ['~/assets/css/fonts.css', '~/assets/css/loading.css'],
@@ -25,10 +27,10 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/api/**': {
-      proxy: "http://127.0.0.1:8000/api/**"
+      proxy: `${apiProxyTarget}/api/**`
     },
-    '/fastapi/docs': { proxy: "http://127.0.0.1:8000/scalar" },
-    '/openapi.json': { proxy: "http://127.0.0.1:8000/openapi.json" },
+    '/fastapi/docs': { proxy: `${apiProxyTarget}/scalar` },
+    '/openapi.json': { proxy: `${apiProxyTarget}/openapi.json` },
   },
 
   icon: {

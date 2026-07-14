@@ -1,0 +1,145 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      HAJDENTITY_DB__HOST: postgres
+      HAJDENTITY_DB__PORT: "5432"
+      HAJDENTITY_DB__DATABASE: hajdentity
+      HAJDENTITY_DB__USER: hajdentity
+      HAJDENTITY_DB__PASSWORD: ${HAJDENTITY_DB__PASSWORD:-changeme}
+      HAJDENTITY_MASTER_KEY: ${HAJDENTITY_MASTER_KEY}
+      HAJDENTITY_KEY3: ${HAJDENTITY_KEY3}
+      HAJDENTITY_SECRET_KEY: ${HAJDENTITY_SECRET_KEY}
+      HAJDENTITY_TOKEN_ENC: ${HAJDENTITY_TOKEN_ENC}
+      HAJDENTITY_SYSTEM_ID: ${HAJDENTITY_SYSTEM_ID:-docker}
+      HAJDENTITY_BASE_URL: ${HAJDENTITY_BASE_URL:-https://id.example.com/}
+      HAJDENTITY_ADMIN_EMAIL: ${HAJDENTITY_ADMIN_EMAIL:-admin@example.com}
+      HAJDENTITY_COOKIE_SECURE: ${HAJDENTITY_COOKIE_SECURE:-true}
+      HAJDENTITY_MAIL__USERNAME: ${HAJDENTITY_MAIL__USERNAME:-}
+      HAJDENTITY_MAIL__PASSWORD: ${HAJDENTITY_MAIL__PASSWORD:-}
+      HAJDENTITY_MAIL__FROM_ADDRESS: ${HAJDENTITY_MAIL__FROM_ADDRESS:-noreply@example.com}
+      HAJDENTITY_MAIL__FROM_NAME: ${HAJDENTITY_MAIL__FROM_NAME:-Hajdentity}
+      HAJDENTITY_MAIL__PORT: ${HAJDENTITY_MAIL__PORT:-587}
+      HAJDENTITY_MAIL__SERVER: ${HAJDENTITY_MAIL__SERVER:-mail.example.com}
+      HAJDENTITY_MAIL__STARTTLS: ${HAJDENTITY_MAIL__STARTTLS:-true}
+      HAJDENTITY_S3__ENDPOINT: ${HAJDENTITY_S3__ENDPOINT:-garage:3900}
+      HAJDENTITY_S3__ACCESS_KEY: ${HAJDENTITY_S3__ACCESS_KEY}
+      HAJDENTITY_S3__SECRET_KEY: ${HAJDENTITY_S3__SECRET_KEY}
+      HAJDENTITY_S3__BUCKET: ${HAJDENTITY_S3__BUCKET:-hajdentity}
+      HAJDENTITY_S3__SECURE: ${HAJDENTITY_S3__SECURE:-false}
+      HAJDENTITY_S3__REGION: ${HAJDENTITY_S3__REGION:-garage}
+      HAJDENTITY_SHARKEY__BASE_URL: ${HAJDENTITY_SHARKEY__BASE_URL:-http://sharkey:2456/}
+      HAJDENTITY_SHARKEY__ADMIN_API_TOKEN: ${HAJDENTITY_SHARKEY__ADMIN_API_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hajdentity
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - hajdentity
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hajdentity
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: hajdentity
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hajdentity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hajdentity
+
+  garage:
+    image: dxflrs/garage:v2.3.0
+    restart: unless-stopped
+    command: server --single-node
+    ports:
+      - "127.0.0.1:3900:3900"
+      - "127.0.0.1:3901:3901"
+      - "127.0.0.1:3903:3903"
+    volumes:
+      - garagedata:/garage
+      - ./garage.toml:/etc/garage.toml:ro
+    environment:
+      GARAGE_CONFIG_FILE: /etc/garage.toml
+    networks:
+      - hajdentity
+
+  sharkey:
+    image: registry.activitypub.software/transfem-org/sharkey:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:2456:2456"
+    volumes:
+      - sharkeydata:/sharkey
+      - ./sharkey-config:/sharkey/.config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    networks:
+      - hajdentity
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hajdentity
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.17
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilidata:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hajdentity
+
+volumes:
+  pgdata:
+  garagedata:
+  sharkeydata:
+  redisdata:
+  meilidata:
+
+networks:
+  hajdentity:
+    driver: bridge

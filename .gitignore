@@ -11,7 +11,7 @@ result
 .redis
 .garage
 
-compose.yaml
+compose.override.yaml
 pg
 
 # Nuxt dev/build outputs
@@ -21,9 +21,12 @@ pg
 .nitro
 .cache
 dist
+.yarn
 
 # Node dependencies
 node_modules
+.yarnrc.yml
+
 
 # Logs
 logs
