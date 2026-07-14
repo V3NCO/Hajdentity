@@ -322,6 +322,7 @@
       nixosModules.default = { config, lib, pkgs, ... }:
         let
           cfg = config.services.hajdentity;
+          isPostgresUnixSocket = lib.hasPrefix "/" cfg.db.host;
           boolToStr = b: if b then "True" else "False";
         in {
           options.services.hajdentity = {
@@ -335,8 +336,9 @@
             };
 
             environmentFile = lib.mkOption {
-              type = lib.types.path;
-              description = "Path to a secure env file containing credentials.";
+              type = lib.types.nullOr lib.types.path;
+              default = null;
+              description = "Path to a secure env file containing extra credentials (e.g., S3 secrets).";
             };
 
             host = lib.mkOption {
@@ -349,6 +351,18 @@
               type = lib.types.port;
               default = 8000;
               description = "Port to bind the backend server to.";
+            };
+
+            user = lib.mkOption {
+              type = lib.types.str;
+              default = "hajdentity";
+              description = "The user Hajdentity services should run as.";
+            };
+
+            group = lib.mkOption {
+              type = lib.types.str;
+              default = "hajdentity";
+              description = "The group Hajdentity services should run as.";
             };
 
             frontend = {
@@ -384,10 +398,32 @@
             maxImageSize = lib.mkOption { type = lib.types.int; default = 10; };
 
             db = {
-              database = lib.mkOption { type = lib.types.str; default = "hajdentity"; };
-              user = lib.mkOption { type = lib.types.str; default = "postgres"; };
-              host = lib.mkOption { type = lib.types.str; default = "localhost"; };
-              port = lib.mkOption { type = lib.types.port; default = 5432; };
+              enable = lib.mkEnableOption "local PostgreSQL database managed by Hajdentity" // {
+                default = true;
+              };
+              createDB = lib.mkEnableOption "automatic creation of the database and matching role" // {
+                default = true;
+              };
+              database = lib.mkOption {
+                type = lib.types.str;
+                default = "hajdentity";
+                description = "Database name.";
+              };
+              user = lib.mkOption {
+                type = lib.types.str;
+                default = "hajdentity";
+                description = "Database user matching the system service account.";
+              };
+              host = lib.mkOption {
+                type = lib.types.str;
+                default = "/run/postgresql";
+                description = "Database host address. Set to a directory path starting with '/' for Unix socket.";
+              };
+              port = lib.mkOption {
+                type = lib.types.port;
+                default = 5432;
+                description = "Database port.";
+              };
             };
 
             mail = {
@@ -414,20 +450,52 @@
             };
           };
 
-          config = {
-            systemd.services.hajdentity = lib.mkIf cfg.enable {
+          config = lib.mkIf cfg.enable {
+            assertions = [
+              {
+                assertion = !isPostgresUnixSocket -> cfg.environmentFile != null;
+                message = "An environmentFile containing at least the database password must be provided when postgres unix sockets are not used.";
+              }
+            ];
+
+            # 1. Handle Declarative Postgres Integration
+            services.postgresql = lib.mkIf cfg.db.enable {
+              enable = true;
+              ensureDatabases = lib.mkIf cfg.db.createDB [ cfg.db.database ];
+              ensureUsers = lib.mkIf cfg.db.createDB [
+                {
+                  name = cfg.db.user;
+                  ensureDBOwnership = true;
+                  ensureClauses.login = true;
+                }
+              ];
+            };
+
+            # 2. Provision Native System accounts
+            users.users = lib.mkIf (cfg.user == "hajdentity") {
+              hajdentity = {
+                name = "hajdentity";
+                group = cfg.group;
+                isSystemUser = true;
+              };
+            };
+            users.groups = lib.mkIf (cfg.group == "hajdentity") { hajdentity = { }; };
+
+            systemd.services.hajdentity = {
               description = "Hajdentity Backend API";
               wantedBy = [ "multi-user.target" ];
-              after = [ "network.target" ];
+              requires = lib.mkIf (cfg.db.enable && isPostgresUnixSocket) [ "postgresql.service" ];
+              after = [ "network.target" ] ++ lib.optionals (cfg.db.enable && isPostgresUnixSocket) [ "postgresql.service" ];
 
               serviceConfig = {
                 Type = "simple";
-                DynamicUser = true;
                 StateDirectory = "hajdentity";
                 WorkingDirectory = "/var/lib/hajdentity";
-                EnvironmentFile = cfg.environmentFile;
+                EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
                 ExecStart = "${cfg.package}/bin/hajdentity-backend --host ${cfg.host} --port ${toString cfg.port}";
                 Restart = "on-failure";
+                User = cfg.user;
+                Group = cfg.group;
               };
 
               environment = {
@@ -471,9 +539,10 @@
 
               serviceConfig = {
                 Type = "simple";
-                DynamicUser = true;
                 ExecStart = "${cfg.frontend.package}/bin/hajdentity-frontend";
                 Restart = "on-failure";
+                User = cfg.user;
+                Group = cfg.group;
               };
 
               environment = {
