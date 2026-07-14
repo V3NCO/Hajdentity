@@ -446,7 +446,14 @@
             };
 
             sharkey = {
-              baseUrl = lib.mkOption { type = lib.types.str; };
+              baseUrl = lib.mkOption {
+                type = lib.types.str;
+                description = "Internal loopback URL used by the backend to talk to Sharkey.";
+              };
+              publicUrl = lib.mkOption {
+                type = lib.types.str;
+                description = "Public external URL sent to clients/browsers.";
+              };
             };
           };
 
@@ -529,6 +536,7 @@
                 HAJDENTITY_S3__REGION = cfg.s3.region;
 
                 HAJDENTITY_SHARKEY__BASE_URL = cfg.sharkey.baseUrl;
+                HAJDENTITY_SHARKEY__PUBLIC_URL = cfg.sharkey.publicUrl;
               };
             };
 

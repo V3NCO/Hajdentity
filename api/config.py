@@ -64,7 +64,8 @@ class S3Settings(BaseSettings):
 # We also want to disable captcha for login so yeah
 
 class SharkeySettings(BaseSettings):
-    base_url: HttpUrl = HttpUrl("http://localhost:2456/")
+    base_url: HttpUrl = HttpUrl("http://localhost:2456/") # The one the service uses to access sharkey, useful if you host it on the same server as hajdentity
+    public_url: HttpUrl = HttpUrl("http://social.blahaj.engineering/") # The one the service shows to the user
     admin_api_token: str = ""
 
 class Settings(BaseSettings):

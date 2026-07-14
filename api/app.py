@@ -641,7 +641,7 @@ async def haj_info(haj_id: UUID4, current_user = Depends(get_optional_user)):
           friend_uuids.append(friend['haj1'])
       if friend_uuids != []:
         friend_list = await HajInfo.select().where(HajInfo.uuid.is_in(friend_uuids))
-    response = {"status": "ok", "haj": haj, "sharkeylink": str(settings.sharkey.base_url)}
+    response = {"status": "ok", "haj": haj, "sharkeylink": str(settings.sharkey.public_url)}
     if sharkey is not None:
       response["sharkey"] = sharkey
     if friend_list is not None:
@@ -881,7 +881,7 @@ async def make_post(request: Request, response: Response, haj_id: UUID4, req: Ne
       def replace_match(match):
         username = match.group(0)[1:]
         if HajInfo.exists().where(HajInfo.username == username):
-            return f"@{username}@{settings.sharkey.base_url.host}"
+            return f"@{username}@{settings.sharkey.public_url.host}"
         return match.group(0)
 
       postreq = await client.post(
@@ -979,7 +979,7 @@ async def use_friend_code(request: Request, response: Response, req: FriendCodeR
         friend.code = None
         await friend.save()
         who = await HajInfo.select().where(HajInfo.uuid == friend.haj1).first()
-        return {'status': 'ok', 'haj': who, 'sharkeylink': str(settings.sharkey.base_url)}
+        return {'status': 'ok', 'haj': who, 'sharkeylink': str(settings.sharkey.public_url)}
       else:
         raise HTTPException(status_code=400, detail="Youre already friends")
     elif friend is not None and friend.haj1 == haj.uuid:
