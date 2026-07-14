@@ -25,7 +25,6 @@ dist
 
 # Node dependencies
 node_modules
-.yarnrc.yml
 
 
 # Logs
