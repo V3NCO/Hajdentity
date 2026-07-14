@@ -1,5 +1,5 @@
 from piccolo.table import Table
-from piccolo.columns import UUID, Timestamptz, ForeignKey, Numeric, Date, Varchar, Integer, Time, Text, Boolean
+from piccolo.columns import UUID, Timestamptz, Numeric, Date, Varchar, Integer, Time, Text, Boolean
 
 
 class NFCTable(Table):
@@ -73,6 +73,10 @@ class SharkeyUsers(Table):
   sharkey_id = Varchar(length=128, unique=True, null=False)
   sharkey_key = Text(null=False)
 
+class UsedUsernames(Table):
+  username = Text(null=False)
+  created_at = Timestamptz(null=False)
+
 class Posts(Table):
   id = UUID(primary_key=True, null=False)
   haj = UUID(null=False, index=True)
@@ -87,3 +91,8 @@ class Friends(Table):
   haj2 = UUID(null=True)
   code = Varchar(length=8, unique=True, null=True)
   created_at = Timestamptz(null=False)
+
+if not UsedUsernames.exists().where(UsedUsernames.username == "system.relay"):
+  UsedUsernames({UsedUsernames.username: "system.actor"}).save()
+  UsedUsernames({UsedUsernames.username: "system.proxy"}).save()
+  UsedUsernames({UsedUsernames.username: "system.relay"}).save()

@@ -4,7 +4,7 @@ import httpx
 import string
 import re
 import emoji
-from home.tables import Humans, HajInfo, NFCTable, SharkeyUsers, Posts, Friends
+from home.tables import Humans, HajInfo, NFCTable, SharkeyUsers, Posts, Friends, UsedUsernames
 from fastapi import FastAPI, HTTPException, APIRouter, Depends, Form, Request, Response, UploadFile, File, BackgroundTasks
 from fastapi_mail import MessageSchema, MessageType
 from piccolo.engine import engine_finder
@@ -448,7 +448,7 @@ async def add_haj(
   haj_id = uuid.uuid4()
   i = None
   try:
-    if await HajInfo.exists().where(HajInfo.username == req.username):
+    if await UsedUsernames.exists().where(UsedUsernames.username == req.username):
       raise HTTPException(status_code=400, detail="Username taken")
     await HajInfo( uuid=haj_id, human=current_user.id, displayname=req.displayname, emoji=req.emoji, species=req.species, username=req.username, date=req.date, size = req.size, location = req.location,
       description = req.description, pronouns = req.pronouns, gender = req.gender, floof = req.floof, squish = req.squish, lastwashed = req.lastwashed, mloftearsabsorbed= req.mloftearsabsorbed
@@ -502,7 +502,7 @@ async def add_haj(
       json={"username": req.username, "password": password},
       headers={"Authorization": f"Bearer {settings.sharkey.admin_api_token}"}
     )
-
+    await UsedUsernames.insert(UsedUsernames(username=req.username))
     i = await client.post(
       url=f"{settings.sharkey.base_url}api/signin-flow",
       json={
