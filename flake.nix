@@ -494,6 +494,12 @@
               requires = lib.mkIf (cfg.db.enable && isPostgresUnixSocket) [ "postgresql.service" ];
               after = [ "network.target" ] ++ lib.optionals (cfg.db.enable && isPostgresUnixSocket) [ "postgresql.service" ];
 
+              preStart = ''
+                export PYTHONPATH=${pkgs.hajdentity-backend}/share/hajdentity
+                export PICCOLO_CONF=piccolo_conf
+                ${pkgs.hajdentity-backend}/bin/piccolo migrations forwards all
+              '';
+
               serviceConfig = {
                 Type = "simple";
                 StateDirectory = "hajdentity";
