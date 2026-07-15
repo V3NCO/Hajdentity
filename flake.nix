@@ -495,9 +495,9 @@
               after = [ "network.target" ] ++ lib.optionals (cfg.db.enable && isPostgresUnixSocket) [ "postgresql.service" ];
 
               preStart = ''
-                export PYTHONPATH=${pkgs.hajdentity-backend}/share/hajdentity
+                export PYTHONPATH=${pkgs.hajdentity}/share/hajdentity
                 export PICCOLO_CONF=piccolo_conf
-                ${pkgs.hajdentity-backend}/bin/piccolo migrations forwards all
+                ${pkgs.hajdentity}/bin/piccolo migrations forwards all
               '';
 
               serviceConfig = {
