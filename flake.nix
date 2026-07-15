@@ -557,6 +557,7 @@
                 HOST = cfg.frontend.host;
                 PORT = toString cfg.frontend.port;
                 NUXT_PUBLIC_API_URL = cfg.baseUrl;
+                NUXT_API_PROXY_TARGET = "http://127.0.0.1:${toString cfg.port}";
               };
             };
           };
