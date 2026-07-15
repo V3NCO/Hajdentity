@@ -2,7 +2,7 @@
 import { createResolver } from "nuxt/kit"
 const { resolve } = createResolver(import.meta.url)
 
-const apiProxyTarget = (globalThis as any).process?.env?.NUXT_API_PROXY_TARGET || 'http://127.0.0.1:8000'
+const apiProxyTarget = import.meta.env.NUXT_API_PROXY_TARGET ?? 'http://127.0.0.1:6532'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
