@@ -833,10 +833,6 @@ async def get_haj_pfp(haj_id: UUID4, current_user = Depends(get_optional_user)):
   except Exception:
     raise HTTPException(status_code=404, detail="Image not found")
 
-# TODO : Ability to tag other plushies in messages
-# Also: Ability to add friend plushies - it would be fun if you have to like tap a plush nfc, get a code, tap the other plush, put the code and you're friends
-# Maybe: Badges/Achievements?
-
 @api.post('/hajs/{haj_id}/posts', tags=["Posts"])
 async def make_post(request: Request, response: Response, haj_id: UUID4, req: NewPostRequest = Depends(post_from_form), image: UploadFile = File(...), current_user = Depends(get_optional_user)):
   user_id = current_user.id if current_user else None
@@ -979,6 +975,27 @@ async def use_friend_code(request: Request, response: Response, req: FriendCodeR
         friend.code = None
         await friend.save()
         who = await HajInfo.select().where(HajInfo.uuid == friend.haj1).first()
+
+        sharkey_in_db1 = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == friend.haj1).first()
+        sharkey_in_db2 = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == friend.haj2).first()
+        token1 = None
+        token2 = None
+
+        if sharkey_in_db1 is not None and sharkey_in_db2 is not None:
+          token1 = decrypt_token(sharkey_in_db1["sharkey_key"])
+          await client.post(
+            url=f"{settings.sharkey.base_url}api/following/create",
+            json={"userId": sharkey_in_db2["sharkey_id"], "withReplies": False},
+            headers = {"Authorization": f"Bearer {token1}"}
+          )
+
+          token2 = decrypt_token(sharkey_in_db2["sharkey_key"])
+          await client.post(
+            url=f"{settings.sharkey.base_url}api/following/create",
+            json={"userId": sharkey_in_db1["sharkey_id"], "withReplies": False},
+            headers = {"Authorization": f"Bearer {token2}"}
+          )
+
         return {'status': 'ok', 'haj': who, 'sharkeylink': str(settings.sharkey.public_url)}
       else:
         raise HTTPException(status_code=400, detail="Youre already friends")
