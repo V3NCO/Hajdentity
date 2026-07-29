@@ -52,7 +52,7 @@ sharkey migrateandstart
 python api/main.py
 
 # Frontend/Nuxt
-cd frontend && npm run dev
+cd frontend && NUXT_API_PROXY_TARGET="http://127.0.0.1:8000" NUXT_PUBLIC_API_URL="http://127.0.0.1:8000" npm run dev
 ```
 
 
