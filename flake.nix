@@ -324,6 +324,8 @@
           cfg = config.services.hajdentity;
           isPostgresUnixSocket = lib.hasPrefix "/" cfg.db.host;
           boolToStr = b: if b then "True" else "False";
+          python = getPython pkgs;
+          pythonEnv = python.withPackages (p: hajdentityPythonPackages pkgs python);
         in {
           options.services.hajdentity = {
             enable = lib.mkEnableOption "Hajdentity Backend API Service";
@@ -465,7 +467,6 @@
               }
             ];
 
-            # 1. Handle Declarative Postgres Integration
             services.postgresql = lib.mkIf cfg.db.enable {
               enable = true;
               ensureDatabases = lib.mkIf cfg.db.createDB [ cfg.db.database ];
@@ -478,7 +479,6 @@
               ];
             };
 
-            # 2. Provision Native System accounts
             users.users = lib.mkIf (cfg.user == "hajdentity") {
               hajdentity = {
                 name = "hajdentity";
@@ -495,15 +495,15 @@
               after = [ "network.target" ] ++ lib.optionals (cfg.db.enable && isPostgresUnixSocket) [ "postgresql.service" ];
 
               preStart = ''
-                export PYTHONPATH=${self.packages.${pkgs.system}.backend}/share/hajdentity
-                export PICCOLO_CONF=piccolo_conf
-                ${self.packages.${pkgs.system}.backend}/bin/piccolo migrations forwards all
+                export PYTHONPATH="${self.packages.${pkgs.system}.backend}/share/hajdentity"
+                export PICCOLO_CONF="piccolo_conf"
+                ${pythonEnv}/bin/piccolo migrations forwards all
               '';
 
               serviceConfig = {
                 Type = "simple";
                 StateDirectory = "hajdentity";
-                WorkingDirectory = "/var/lib/hajdentity";
+                WorkingDirectory = "${self.packages.${pkgs.system}.backend}/share/hajdentity";
                 EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
                 ExecStart = "${cfg.package}/bin/hajdentity-backend --host ${cfg.host} --port ${toString cfg.port}";
                 Restart = "on-failure";
