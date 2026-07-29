@@ -100,11 +100,11 @@
     </div>
     <div class="stat">
       <h2>Posts</h2>
-      <h1 style="background-image: radial-gradient(circle at top left, #0D76FF 0, #084799 100%);">{{formatCompactNumber(sharkeydata.notesCount)}}</h1>
+      <h1 style="background-image: radial-gradient(circle at top left, #0D76FF 0, #084799 100%);">{{formatCompactNumber(sharkeydata?.notesCount)}}</h1>
     </div>
     <div class="stat">
       <h2>Followers</h2>
-      <h1 style="background-image: radial-gradient(circle at top left, #AD41FF 0, #682799 100%);">{{formatCompactNumber(sharkeydata.followersCount)}}</h1>
+      <h1 style="background-image: radial-gradient(circle at top left, #AD41FF 0, #682799 100%);">{{formatCompactNumber(sharkeydata?.followersCount)}}</h1>
     </div>
   </div>
   <div class="tile" :style="{ backgroundImage: `url(/api/hajs/${route.params.id}/pfp)` }"></div>
