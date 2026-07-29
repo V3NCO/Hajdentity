@@ -47,7 +47,9 @@
           uvicorn
           starlette
           fastapi
-          fastapi-mail
+          (fastapi-mail.overridePythonAttrs (old: {
+            dontCheckRuntimeDeps = true;
+          }))
           (scalar-fastapi.overridePythonAttrs { doCheck = false; })
           pycryptodome
           pyjwt
