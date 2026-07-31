@@ -1,5 +1,11 @@
 # Hajdentity
 
+> [!WARNING]
+> This project is incredibly messy, unstable, and unfinished:
+> this is not a result of low effort or vibecoding, 
+> this is a result of me being horrible at coding and managing my time
+> Some stuff is as polished as i could make it, some stuff is incredibly rushed.
+
 ## Description
 
 Hajdentity is a platform to make a profile for your beloved plushies (BLÅHAJ is love, BLÅHAJ is life), you get a profile page; giving a bunch of information such as:
@@ -26,6 +32,16 @@ And once that's done we can do our authenticated action! In this case I give the
 - Making a new post
 - Seeing the haj's profile
 - Creating or using a friend code to- well- add a friend.
+
+## Features
+
+- Creating a plushie (/dashboard/plushies/new)
+- Editing a plushie (/dashboard/plushies/{id})
+- Adding an NFC tag! (/dashboard/plushies/nfc?haj={id})
+- Profile page (/plush/{id})
+- Adding friends (/plush/{id}/friend)
+- Making memories (/plush/{id}/post)
+- Everything being synced with sharkey, and therefore being federated!
 
 ## Development
 
