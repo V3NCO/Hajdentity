@@ -50,7 +50,7 @@ useSeoMeta({
 useHead({
   htmlAttrs: { lang: 'en' },
   bodyAttrs: {
-    style: 'overflow: hidden; background-image: url("/stocksharks.jpeg"); background-repeat: no-repeat; background-size: cover; font-family: "Noto Sans";'
+    style: 'overflow: hidden; background-image: url("/stocksharks.jpeg"); background-repeat: no-repeat; background-size: cover; font-family: "Space Grotesk";'
   }
 })
 </script>

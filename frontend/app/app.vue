@@ -10,7 +10,7 @@ html, body {
   margin: 0;
 }
 body {
-  font-family: "Noto Sans";
+  font-family: "Space Grotesk";
 }
 #app, #__nuxt {
   height: 100%;

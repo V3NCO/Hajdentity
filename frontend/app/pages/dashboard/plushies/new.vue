@@ -19,7 +19,7 @@ useSeoMeta({
 })
 useHead({
   htmlAttrs: { lang: 'en' },
-  bodyAttrs: { style: 'overflow: hidden; font-family: "Noto Sans";' }
+  bodyAttrs: { style: 'overflow: hidden; font-family: "Space Grotesk";' }
 })
 
 const selectedspecies = ref('haj')
