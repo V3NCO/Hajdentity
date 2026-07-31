@@ -202,6 +202,10 @@ async function onNFC() {
   navigateTo(`/dashboard/plushies/nfc?haj=${route.params.id}`)
 }
 
+async function onAct() {
+  navigateTo(`/plush/${route.params.id}/act`)
+}
+
 async function delNFC() {
   await api.DELETE('/api/nfc/{haj_id}',
     {
@@ -253,6 +257,11 @@ onMounted(async () => {
        <p>{{plushdata?.description}}</p>
     </div>
   </div>
+
+  <button @click="onAct" class="button">
+    <h1>Actions</h1>
+  </button>
+
   <div class="warning" v-if="!nfc.is_setup">
     <h2>Setup an NFC Tag!</h2>
     <p>
