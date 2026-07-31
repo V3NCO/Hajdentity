@@ -32,7 +32,7 @@
 
   useHead({
   htmlAttrs: { lang: 'en' },
-  bodyAttrs: { style: 'overflow: hidden; background-color: #212121; background-repeat: no-repeat; background-size: cover;' }
+  bodyAttrs: { style: 'background-color: #212121; background-repeat: no-repeat; background-size: cover;' }
 })
   const api = useApi()
   const route = useRoute()
@@ -419,4 +419,69 @@
   background: linear-gradient(90deg, #B088D6, #8B5CF6);
   transition: width 0.3s;
 }
+
+@media (max-width: 900px) {
+  .bento {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .tile:nth-child(1) {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .tile:nth-child(4) {
+    grid-column: 1;
+    grid-row: 2;
+    aspect-ratio: 1;
+  }
+
+  .tile:nth-child(2) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .tile:nth-child(3) {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+  }
+
+  .tile:nth-child(3) .stat:nth-child(1) {
+    grid-column: 1 / -1;
+    height: 180px;
+  }
+
+  .tile:nth-child(3) .stat:nth-child(2) {
+    display: none;
+  }
+
+  .tile:nth-child(3) .stat:nth-child(3),
+  .tile:nth-child(3) .stat:nth-child(4) {
+    grid-column: span 1;
+  }
+
+  .tile:nth-child(n+5) {
+    grid-column: span 1;
+    grid-row: auto;
+  }
+
+  .tile:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+
+  .topline {
+    flex-wrap: wrap;
+    font-size: 1.8rem;
+  }
+
+  .location {
+    margin-left: 0;
+  }
+}
+
 </style>
