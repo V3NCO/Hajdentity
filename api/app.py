@@ -976,8 +976,8 @@ async def use_friend_code(request: Request, response: Response, req: FriendCodeR
         await friend.save()
         who = await HajInfo.select().where(HajInfo.uuid == friend.haj1).first()
 
-        sharkey_in_db1 = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == friend.haj1).first()
-        sharkey_in_db2 = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == friend.haj2).first()
+        sharkey_in_db1 = await SharkeyUsers.select().where(SharkeyUsers.haj == friend.haj1).first()
+        sharkey_in_db2 = await SharkeyUsers.select().where(SharkeyUsers.haj == friend.haj2).first()
         token1 = None
         token2 = None
 
