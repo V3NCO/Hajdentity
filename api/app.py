@@ -615,6 +615,9 @@ async def list_hajs(
 
 @api.get('/hajs/{haj_id}', response_model=HajResponse, tags=["Haj"])
 async def haj_info(haj_id: UUID4):
+  exists = await HajInfo.exists().where(HajInfo.uuid == haj_id)
+  if not exists:
+    raise HTTPException(status_code=404, detail="Not found")
   haj = await HajInfo.select().where(HajInfo.uuid == haj_id).first()
   token_in_db = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == haj_id).first()
   sharkey = None
@@ -907,12 +910,12 @@ async def make_post(request: Request, response: Response, haj_id: UUID4, req: Ne
   raise HTTPException(status_code=403, detail="Not authorized")
 
 @api.get('/hajs/{haj_id}/posts', response_model=PostListResponse, tags=["Posts"])
-async def get_posts(haj_id: UUID4, current_user = Depends(get_optional_user)):
-  user_id = current_user.id if current_user else None
-  if await check_haj_perm(user_id, haj_id):
-    posts = await Posts.select().where(Posts.haj == haj_id).order_by(Posts.created_at, ascending=False)
-    return {"status": "ok", "posts": posts}
-  raise HTTPException(status_code=403, detail="Not authorized, try tapping again")
+async def get_posts(haj_id: UUID4):
+  exists = await HajInfo.exists().where(HajInfo.uuid == haj_id)
+  if not exists:
+    raise HTTPException(status_code=404, detail="Not found")
+  posts = await Posts.select().where(Posts.haj == haj_id).order_by(Posts.created_at, ascending=False)
+  return {"status": "ok", "posts": posts}
 
 @api.get('/hajs/{haj_id}/posts/{post_id}/image', tags=["Posts"])
 async def get_post_image(haj_id: UUID4, post_id: UUID4, current_user = Depends(get_optional_user)):
