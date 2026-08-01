@@ -614,40 +614,37 @@ async def list_hajs(
   return {"status": "ok", "hajs": hajs}
 
 @api.get('/hajs/{haj_id}', response_model=HajResponse, tags=["Haj"])
-async def haj_info(haj_id: UUID4, current_user = Depends(get_optional_user)):
-  user_id = current_user.id if current_user else None
-  if await check_haj_perm(user_id, haj_id):
-    haj = await HajInfo.select().where(HajInfo.uuid == haj_id).first()
-    token_in_db = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == haj_id).first()
-    sharkey = None
-    friend_list = None
-    if token_in_db is not None and haj is not None:
-      try:
-        token = decrypt_token(token_in_db["sharkey_key"])
-        sharkey_user = await client.post(
-          f"{settings.sharkey.base_url}api/users/show",
-          json={'username': haj["username"]},
-          headers={'Authorization': token}
-        )
-        sharkey = sharkey_user.json()
-      except Exception:
-        pass
-      friends = await Friends.select().where(((Friends.haj1 == haj['uuid']) |  (Friends.haj2 == haj['uuid'])) & (Friends.code.is_null()))
-      friend_uuids = []
-      for friend in friends:
-        if friend['haj1'] == haj['uuid']:
-          friend_uuids.append(friend['haj2'])
-        else:
-          friend_uuids.append(friend['haj1'])
-      if friend_uuids != []:
-        friend_list = await HajInfo.select().where(HajInfo.uuid.is_in(friend_uuids))
-    response = {"status": "ok", "haj": haj, "sharkeylink": str(settings.sharkey.public_url)}
-    if sharkey is not None:
-      response["sharkey"] = sharkey
-    if friend_list is not None:
-      response["friends"] = friend_list
-    return response
-  raise HTTPException(status_code=403, detail="Not authorized")
+async def haj_info(haj_id: UUID4):
+  haj = await HajInfo.select().where(HajInfo.uuid == haj_id).first()
+  token_in_db = await SharkeyUsers.select(SharkeyUsers.sharkey_key).where(SharkeyUsers.haj == haj_id).first()
+  sharkey = None
+  friend_list = None
+  if token_in_db is not None and haj is not None:
+    try:
+      token = decrypt_token(token_in_db["sharkey_key"])
+      sharkey_user = await client.post(
+        f"{settings.sharkey.base_url}api/users/show",
+        json={'username': haj["username"]},
+        headers={'Authorization': token}
+      )
+      sharkey = sharkey_user.json()
+    except Exception:
+      pass
+    friends = await Friends.select().where(((Friends.haj1 == haj['uuid']) |  (Friends.haj2 == haj['uuid'])) & (Friends.code.is_null()))
+    friend_uuids = []
+    for friend in friends:
+      if friend['haj1'] == haj['uuid']:
+        friend_uuids.append(friend['haj2'])
+      else:
+        friend_uuids.append(friend['haj1'])
+    if friend_uuids != []:
+      friend_list = await HajInfo.select().where(HajInfo.uuid.is_in(friend_uuids))
+  response = {"status": "ok", "haj": haj, "sharkeylink": str(settings.sharkey.public_url)}
+  if sharkey is not None:
+    response["sharkey"] = sharkey
+  if friend_list is not None:
+    response["friends"] = friend_list
+  return response
 
 @api.delete('/hajs/{haj_id}', tags=["Haj"])
 async def delete_haj(haj_id: UUID4, current_user = Depends(get_current_active_user)):
