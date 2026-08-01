@@ -6,6 +6,14 @@
 > this is a result of me being horrible at coding and managing my time
 > Some stuff is as polished as i could make it, some stuff is incredibly rushed.
 
+## Missing features
+- Deleting posts
+- Having emails actually matter
+- 2FA
+- Forgot password
+- Editing posts
+- Badges
+
 ## Description
 
 Hajdentity is a platform to make a profile for your beloved plushies (BLÅHAJ is love, BLÅHAJ is life), you get a profile page; giving a bunch of information such as:
